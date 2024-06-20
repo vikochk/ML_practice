@@ -46,9 +46,9 @@ int main()
                 else if (i == 0 && j == 2) // Пример для одного шва в первой строке длиной 200
                 {
                     DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 200, 200, 70); // Прямоугольник шва
+                    seamDefect.rect = cv::Rect2i(1005, 200, 195, 70); // Прямоугольник шва
                     seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(70, 200, CV_8UC1) * 255; // Бинарная маска шва
+                    seamDefect.mask = cv::Mat::ones(70, 195, CV_8UC1) * 255; // Бинарная маска шва
                     seamDefect.klass = 1; // Класс "шов"
                     batch.detects.push_back(seamDefect);
                 }
