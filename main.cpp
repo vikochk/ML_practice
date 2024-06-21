@@ -8,11 +8,11 @@ int main()
 
     // Заполняем входные данные
     {
-        cv::Size2i imageSize(1200, 1000);
+        cv::Size2i imageSize(2000, 2000);
         cv::Size2i batchSize(500, 500);
 
-        int cols = imageSize.width / batchSize.width + (imageSize.width % batchSize.width != 0);         // = 3
-        int rows = imageSize.height / batchSize.height + (imageSize.height % batchSize.height != 0);     // = 2
+        int cols = imageSize.width / batchSize.width + (imageSize.width % batchSize.width != 0);         // = 4
+        int rows = imageSize.height / batchSize.height + (imageSize.height % batchSize.height != 0);     // = 4
 
         // формируем массив батчей
         inputBatchesDefects.resize(rows);
@@ -33,63 +33,84 @@ int main()
 
                 // Добавляем дефекты для этого батча
 
-                // Пример для швов в первой строке
-                if (i == 0 && j < 2) // Пример для швов в первой строке
+                // Пример для соприкасающихся ровно швов в первой строке 
+                if (i == 0 && j < 2)
                 {
                     DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 200, 500, 50); // Прямоугольник шва
+                    seamDefect.rect = cv::Rect2i(j * 500, 100, 500, 50); // Прямоугольник шва 
                     seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва
-                    seamDefect.klass = 1; // Класс "шов"
+                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
                     batch.detects.push_back(seamDefect);
                 }
-                else if (i == 0 && j == 2) // Пример для одного шва в первой строке длиной 200
+                else if (i == 0 && j >= 2)
                 {
                     DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(1005, 200, 195, 70); // Прямоугольник шва
+                    seamDefect.rect = cv::Rect2i(j * 500, 100, 500, 50); // Прямоугольник шва 
                     seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(70, 195, CV_8UC1) * 255; // Бинарная маска шва
-                    seamDefect.klass = 1; // Класс "шов"
-                    batch.detects.push_back(seamDefect);
-                }
-
-                // Пример для швов в первой строке (еще один шов)
-                if (i == 0 && j < 2) // Пример для швов в первой строке
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 400, 500, 50); // Прямоугольник шва
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва
-                    seamDefect.klass = 1; // Класс "шов"
-                    batch.detects.push_back(seamDefect);
-                }
-                else if (i == 0 && j == 2) // Пример для одного шва в первой строке длиной 200
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 400, 200, 20); // Прямоугольник шва
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(20, 200, CV_8UC1) * 255; // Бинарная маска шва
-                    seamDefect.klass = 1; // Класс "шов"
+                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
                     batch.detects.push_back(seamDefect);
                 }
 
-                // Пример для швов во второй строке
-                if (i == 1 && j < 2) // Пример для швов в первой строке
+                // Пример для соприкасающихся не ровно швов в первой строке 
+                if (i == 0 && j < 2)
                 {
                     DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 900, 500, 50); // Прямоугольник шва
+                    seamDefect.rect = cv::Rect2i(j * 500, 300, 500, 50); // Прямоугольник шва 
                     seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва
-                    seamDefect.klass = 1; // Класс "шов"
+                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
                     batch.detects.push_back(seamDefect);
                 }
-                else if (i == 1 && j == 2) // Пример для одного шва в первой строке длиной 200
+                else if (i == 0 && j >= 2)
                 {
                     DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 900, 200, 100); // Прямоугольник шва
+                    seamDefect.rect = cv::Rect2i(j * 500, 320, 500, 50); // Прямоугольник шва 
                     seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(100, 200, CV_8UC1) * 255; // Бинарная маска шва
-                    seamDefect.klass = 1; // Класс "шов"
+                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
+                    batch.detects.push_back(seamDefect);
+                }
+
+                // Пример для шва на расстоянии 10 пикс от другого во второй строке 
+                if (i == 1 && j < 3)
+                {
+                    DetectResult seamDefect;
+                    seamDefect.rect = cv::Rect2i(j * 500, 550, 500, 40); // Прямоугольник шва 
+                    seamDefect.prob = 0.95f;
+                    seamDefect.mask = cv::Mat::ones(40, 500, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
+                    batch.detects.push_back(seamDefect);
+                }
+                else if (i == 1 && j == 3)
+                {
+                    DetectResult seamDefect;
+                    seamDefect.rect =
+                        cv::Rect2i(j * 500, 560, 490, 40); // Прямоугольник шва 
+                    seamDefect.prob = 0.95f;
+                    seamDefect.mask = cv::Mat::ones(40, 490, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
+                    batch.detects.push_back(seamDefect);
+                }
+
+                // Пример для шва, найденного частично, во второй строке 
+                if (i == 1 && j == 0)
+                {
+                    DetectResult seamDefect;
+                    seamDefect.rect = cv::Rect2i(j * 500, 800, 500, 50); // Прямоугольник шва 
+                    seamDefect.prob = 0.95f;
+                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
+                    batch.detects.push_back(seamDefect);
+                }
+                else if (i == 1 && j == 3)
+                {
+                    DetectResult seamDefect;
+                    seamDefect.rect = cv::Rect2i(j * 500, 800, 200, 100); // Прямоугольник шва 
+                    seamDefect.prob = 0.95f;
+                    seamDefect.mask = cv::Mat::ones(100, 200, CV_8UC1) * 255; // Бинарная маска шва 
+                    seamDefect.klass = 1; // Класс "шов" 
                     batch.detects.push_back(seamDefect);
                 }
             }
