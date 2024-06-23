@@ -1,6 +1,6 @@
 #pragma once
 
-#include <C:\OpenCV\opencv\build\include\opencv2\core.hpp>
+#include <C:\OpenCV10\opencv\build\include\opencv2\core.hpp>
 #include <list>
 
 // Структура, описывающая один найденный дефект

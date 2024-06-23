@@ -16,12 +16,58 @@
  * @return
  */
 
-static constexpr int tolerance = 10;
 
-void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& mergedSeams);
+cv::Rect2i mergeRects(const cv::Rect2i& r1, const cv::Rect2i& r2)
+{
+    int x = std::min(r1.x, r2.x);
+    int y = std::min(r1.y, r2.y);
+    int width = std::max(r1.x + r1.width, r2.x + r2.width) - x;
+    int height = std::max(r1.y + r1.height, r2.y + r2.height) - y;
+    return cv::Rect2i(x, y, width, height);
+}
 
 
-//с учетом погрешности в 10 пикселей(?) 
+cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, const cv::Rect2i& r2)
+{
+    cv::Rect2i mergedRect = mergeRects(r1, r2);
+    cv::Mat mergedMask = cv::Mat::zeros(mergedRect.size(), CV_8UC1);
+
+    cv::Rect2i r1_in_merged = cv::Rect2i(r1.x - mergedRect.x, r1.y - mergedRect.y, r1.width, r1.height);
+    cv::Rect2i r2_in_merged = cv::Rect2i(r2.x - mergedRect.x, r2.y - mergedRect.y, r2.width, r2.height);
+
+    m1.copyTo(mergedMask(r1_in_merged));
+    m2.copyTo(mergedMask(r2_in_merged));
+
+    return mergedMask;
+}
+
+
+void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& mergedSeams)
+{
+    bool merged = false;
+    for (auto& mergedSeam : mergedSeams)
+    {
+        // Проверим, имеют ли два дефекта пересечения по оси Y
+        if ((defect.rect.y < mergedSeam.rect.y + mergedSeam.rect.height) &&
+            (mergedSeam.rect.y < defect.rect.y + defect.rect.height))
+        {
+            // Объединяем текущий дефект с уже найденным
+            cv::Rect2i newRect = mergeRects(mergedSeam.rect, defect.rect);
+            cv::Mat newMask = mergeMasks(mergedSeam.mask, defect.mask, mergedSeam.rect, defect.rect);
+
+            mergedSeam.rect = newRect;
+            mergedSeam.mask = newMask;
+            mergedSeam.prob = std::max(mergedSeam.prob, defect.prob); // берем максимальную вероятность
+            merged = true;
+            break;
+        }
+    }
+    if (!merged) {
+        mergedSeams.push_back(defect);
+    }
+}
+
+
 void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects,
     std::vector<DetectResult>& resultDetects)
 {
@@ -38,11 +84,11 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects,
             {
                 if (defect.klass == 1) // Если класс дефекта "шов" 
                 {
-                    horizontalDefect(defect, mergedSeams);
+                    horizontalDefect(std::move(defect), mergedSeams);
                 }
                 else
                 {
-                    resultDetects.emplace_back(std::move(defect)); // Добавляем обычные дефекты 
+                    resultDetects.emplace_back(std::move(defect));
                 }
             }
         }
@@ -52,40 +98,6 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects,
         {
             resultDetects.emplace_back(std::move(seam));
         }
-    }
-}
-
-
-void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& mergedSeams)
-{
-    bool merged = false;
-    for (auto& mergedSeam : mergedSeams)
-    {
-        if (defect.rect.y == mergedSeam.rect.y &&
-            (std::abs(defect.rect.x - (mergedSeam.rect.x + mergedSeam.rect.width)) <= tolerance || // смежные по горизонтали с учетом погрешности 
-                std::abs(mergedSeam.rect.x - (defect.rect.x + defect.rect.width)) <= tolerance))
-        {
-            // Объединяем текущий шов с уже найденным 
-            int newWidth = std::max(mergedSeam.rect.x + mergedSeam.rect.width, defect.rect.x + defect.rect.width) - std::min(mergedSeam.rect.x, defect.rect.x);
-            mergedSeam.rect.x = std::min(mergedSeam.rect.x, defect.rect.x);
-            mergedSeam.rect.width = newWidth;
-            mergedSeam.rect.height = std::max(mergedSeam.rect.height, defect.rect.height); // Максимальная высота 
-
-            // Объединяем маски 
-            cv::Mat extendedMask = cv::Mat::zeros(mergedSeam.rect.size(), CV_8UC1);
-            int offset = mergedSeam.mask.cols;
-            mergedSeam.mask.copyTo(extendedMask(cv::Rect(0, 0, mergedSeam.mask.cols, mergedSeam.mask.rows)));
-            defect.mask.copyTo(extendedMask(cv::Rect(offset, 0, defect.mask.cols, defect.mask.rows)));
-            mergedSeam.mask = extendedMask;
-
-            merged = true;
-            break;
-        }
-    }
-
-    if (!merged)
-    {
-        mergedSeams.push_back(defect);
     }
 }
 
