@@ -2,6 +2,17 @@
 #include <iostream>
 #include "DetectMerger.h"
 
+// функция для создания дефектов
+void addDefect(std::vector<std::vector<BatchResult>>& inputBatchesDefects, int i, int j, int x, int y, int width, int height, int klass)
+{
+    DetectResult defect;
+    defect.rect = cv::Rect2i(x, y, width, height);
+    defect.prob = 0.95f; // пока фиксированная вероятность 
+    defect.mask = cv::Mat::ones(height, width, CV_8UC1) * 255;
+    defect.klass = klass;
+    inputBatchesDefects[i][j].detects.push_back(defect);
+}
+
 int main()
 {
     std::vector<std::vector<BatchResult>> inputBatchesDefects(2, std::vector<BatchResult>(4));
@@ -31,90 +42,73 @@ int main()
                 batch.batchRect.width = std::min(batchSize.width, imageSize.width - batch.batchRect.x);
                 batch.batchRect.height = std::min(batchSize.height, imageSize.height - batch.batchRect.y);
 
-                // Добавляем дефекты для этого батча
-
-                // Пример для соприкасающихся ровно швов в первой строке 
-                if (i == 0 && j < 2)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 100, 500, 50); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                // Пример для соприкасающихся ровно швов в первой строке
+                if (i == 0 && j < 2) {
+                    addDefect(inputBatchesDefects, i, j, j * 500, 100, 500, 50, 1);
                 }
-                else if (i == 0 && j >= 2)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 100, 500, 40); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(40, 500, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                else if (i == 0 && j >= 2) {
+                    addDefect(inputBatchesDefects, i, j, j * 500, 100, 500, 40, 1);
                 }
 
-                // Пример для соприкасающихся не ровно швов в первой строке 
-                if (i == 0 && j < 2)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 300, 500, 50); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                // Пример для соприкасающихся не ровно швов в первой строке
+                if (i == 0 && j < 2) {
+                    addDefect(inputBatchesDefects, i, j, j * 500, 300, 500, 50, 1);
                 }
-                else if (i == 0 && j >= 2)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 320, 500, 50); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                else if (i == 0 && j >= 2) {
+                    addDefect(inputBatchesDefects, i, j, j * 500, 320, 500, 50, 1);
                 }
 
-                // Пример для шва на расстоянии 10 пикс от другого во второй строке 
-                if (i == 1 && j < 3)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 550, 500, 40); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(40, 500, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                // Пример для шва на расстоянии 10 пикс от другого во второй строке
+                if (i == 1 && j < 3) {
+                    addDefect(inputBatchesDefects, i, j, j * 500, 550, 500, 40, 1);
                 }
-                else if (i == 1 && j == 3)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500 + 10, 560, 490, 40); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(40, 490, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                else if (i == 1 && j == 3) {
+                    addDefect(inputBatchesDefects, i, j, j * 500 + 10, 560, 490, 40, 1);
                 }
 
-                // Пример для шва, найденного частично, во второй строке 
-                if (i == 1 && j == 0)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500, 800, 500, 50); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(50, 500, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                // Пример для шва, найденного частично, во второй строке
+                if (i == 1 && j == 0) {
+                    addDefect(inputBatchesDefects, i, j, j * 500, 800, 500, 50, 1);
                 }
-                else if (i == 1 && j == 3)
-                {
-                    DetectResult seamDefect;
-                    seamDefect.rect = cv::Rect2i(j * 500 + 200, 800, 300, 100); // Прямоугольник шва 
-                    seamDefect.prob = 0.95f;
-                    seamDefect.mask = cv::Mat::ones(100, 300, CV_8UC1) * 255; // Бинарная маска шва 
-                    seamDefect.klass = 1; // Класс "шов" 
-                    batch.detects.push_back(seamDefect);
+                else if (i == 1 && j == 3) {
+                    addDefect(inputBatchesDefects, i, j, j * 500 + 200, 800, 300, 100, 1);
+                }
+
+                // Пример для шва, пересекающего четыре батча (250, 450 длина 500 ширина 50)
+                //А
+                if (i == 0 && j == 0) {
+                   addDefect(inputBatchesDefects, i, j, 250, 450, 250, 50, 1);
+                }
+                //C
+                if (i == 0 && j == 1) {
+                   addDefect(inputBatchesDefects, i, j, 500, 450, 250, 50, 1);
+                }
+                //B
+                if (i == 1 && j == 0) {
+                    addDefect(inputBatchesDefects, i, j, 250, 500, 250, 50, 1);
+                }
+                //D
+                if (i == 1 && j == 1) {
+                   addDefect(inputBatchesDefects, i, j, 500, 500, 250, 50, 1);
+                }
+
+                // Пример для шва, пересекающего четыре батча (1250, 450 длина 500 ширина 50)
+                if (i == 0 && j == 2) {
+                    addDefect(inputBatchesDefects, i, j, 1250, 450, 250, 50, 1);
+                }
+                if (i == 0 && j == 3) {
+                    addDefect(inputBatchesDefects, i, j, 1500, 450, 250, 50, 1);
+                }
+                if (i == 1 && j == 2) {
+                    addDefect(inputBatchesDefects, i, j, 1250, 500, 250, 50, 1);
+                }
+                if (i == 1 && j == 3) {
+                    addDefect(inputBatchesDefects, i, j, 1500, 500, 250, 50, 1);
                 }
             }
         }
     }
+
 
     // Использование функции для объединения дефектов
     {
@@ -124,7 +118,7 @@ int main()
         mergeDefectsMy(std::move(inputBatchesDefects), resultDefects);
         //базовая функция для тестирования
         //mergeDefects(std::move(inputBatchesDefects), resultDefects);  // используем move, чтобы не копировать входные дефекты в функцию, а переместить их
-        
+
         // Выводим результаты
         for (const auto& defect : resultDefects)
         {
