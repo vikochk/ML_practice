@@ -41,10 +41,9 @@ cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, c
     return mergedMask;
 }
 
-
 void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& mergedSeams)
 {
-    bool merged = false;
+    bool mergedHor = false;
     for (auto& mergedSeam : mergedSeams)
     {
         // Проверим, имеют ли два дефекта пересечения по оси Y
@@ -58,15 +57,42 @@ void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& mer
             mergedSeam.rect = newRect;
             mergedSeam.mask = newMask;
             mergedSeam.prob = std::max(mergedSeam.prob, defect.prob); // берем максимальную вероятность
-            merged = true;
+            mergedHor = true;
             break;
         }
     }
-    if (!merged) {
+    if (!mergedHor) {
         mergedSeams.push_back(defect);
     }
 }
 
+void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& resultDetects)
+{
+    bool mergedVer = false;
+    for (auto& resultDetect : resultDetects)
+    {
+        // возможно стоит доработать
+        // левая нижняя координата X предыдущего объединенного дефекта 
+        // совпадает с левой верхней координатой X текущего дефекта
+        if (resultDetect.rect.x == defect.rect.x &&
+            resultDetect.rect.y + resultDetect.rect.height == defect.rect.y)
+        {
+            // Объединяем текущий дефект с уже найденным
+            cv::Rect2i newRect = mergeRects(resultDetect.rect, defect.rect);
+            cv::Mat newMask = mergeMasks(resultDetect.mask, defect.mask, resultDetect.rect, defect.rect);
+
+            resultDetect.rect = newRect;
+            resultDetect.mask = newMask;
+            resultDetect.prob = std::max(resultDetect.prob, defect.prob); // берем максимальную вероятность
+            mergedVer = true;
+            break;
+        }
+    }
+    //если вертикально не объединяется, то записываем в результат
+    if (!mergedVer) {
+        resultDetects.emplace_back(std::move(defect));
+    }
+}
 
 void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects,
     std::vector<DetectResult>& resultDetects)
@@ -92,16 +118,17 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects,
                 }
             }
         }
-
-        // Добавляем объединенные швы в результат 
+        
+        //для всех получившихся горизонатльных швов этой строки
         for (auto& seam : mergedSeams)
         {
-            resultDetects.emplace_back(std::move(seam));
+            verticalDefect(std::move(seam), resultDetects); // внутри уже будет происходить запись mergedSeams в resultDetects
         }
     }
 }
 
 
+// оставлено для просмотра созданных для тестирования дефектов по отдельности
 void mergeDefects(std::vector<std::vector<BatchResult>> batchesDetects,
     std::vector<DetectResult>& resultDetects)
 {
