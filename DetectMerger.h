@@ -66,88 +66,109 @@ cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, c
     return mergedMask;
 }
 
-void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& mergedSeams)
+void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& horizontalMergedDefectsOneType)
 {
     bool mergedHor = false;
-    for (auto& mergedSeam : mergedSeams)
+    for (auto& mergedDefect : horizontalMergedDefectsOneType)
     {
         // Проверяем, пересекаются ли дефекты по вертикали
-        if ((defect.rect.y < mergedSeam.rect.y + mergedSeam.rect.height) &&
-            (mergedSeam.rect.y < defect.rect.y + defect.rect.height))
+        if ((defect.rect.y < mergedDefect.rect.y + mergedDefect.rect.height) &&
+            (mergedDefect.rect.y < defect.rect.y + defect.rect.height))
         {
             // Объединяем дефекты
-            cv::Rect2i newRect = mergedSeam.rect | defect.rect;
-            cv::Mat newMask = mergeMasks(mergedSeam.mask, defect.mask, mergedSeam.rect, defect.rect);
+            cv::Rect2i newRect = mergedDefect.rect | defect.rect;
+            cv::Mat newMask = mergeMasks(mergedDefect.mask, defect.mask, mergedDefect.rect, defect.rect);
 
-            mergedSeam.rect = newRect;
-            mergedSeam.mask = newMask;
-            mergedSeam.prob = std::max(mergedSeam.prob, defect.prob); // берем максимальную вероятность
+            mergedDefect.rect = newRect;
+            mergedDefect.mask = newMask;
+            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); // берем максимальную вероятность
             mergedHor = true;
             break;
         }
     }
     if (!mergedHor) {
-        mergedSeams.push_back(defect);
+        horizontalMergedDefectsOneType.push_back(defect);
     }
 }
 
 
-void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& resultDetects)
+void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verticalMergedDefectsOneType)
 {
     bool mergedVer = false;
-    for (auto& resultDetect : resultDetects)
+    for (auto& mergedDefect : verticalMergedDefectsOneType)
     {
+        // Расширяем рамку одного из дефектов для проверки окрестности
+        cv::Rect2i expandedRect = defect.rect;
+        expandedRect.x -= 10;
+        expandedRect.y -= 10;
+        expandedRect.width += 20;
+        expandedRect.height += 20;
+
         // разница между дефектами одного класса может быть до 10 пикселей 
-        if ((defect.klass == resultDetect.klass) && std::abs(resultDetect.rect.x - defect.rect.x) <= 10 &&
-            std::abs(resultDetect.rect.y + resultDetect.rect.height - defect.rect.y) <= 10)
+        //if (std::abs(mergedDefect.rect.x - defect.rect.x) <= 10 &&
+        //    std::abs(mergedDefect.rect.y + mergedDefect.rect.height - defect.rect.y) <= 10)
+        // Проверяем пересечение расширенных рамок
+        if ((expandedRect & mergedDefect.rect).area() > 0)
         {
             // Объединяем текущий дефект с уже найденным
-            cv::Rect2i newRect = resultDetect.rect | defect.rect;
-            cv::Mat newMask = mergeMasks(resultDetect.mask, defect.mask, resultDetect.rect, defect.rect);
+            cv::Rect2i newRect = mergedDefect.rect | defect.rect;
+            cv::Mat newMask = mergeMasks(mergedDefect.mask, defect.mask, mergedDefect.rect, defect.rect);
 
-            resultDetect.rect = newRect;
-            resultDetect.mask = newMask;
-            resultDetect.prob = std::max(resultDetect.prob, defect.prob); // берем максимальную вероятность
+            mergedDefect.rect = newRect;
+            mergedDefect.mask = newMask;
+            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); // берем максимальную вероятность
             mergedVer = true;
             break;
         }
     }
     //если вертикально не объединяется, то записываем в результат
     if (!mergedVer) {
-        resultDetects.emplace_back(std::move(defect));
+        verticalMergedDefectsOneType.emplace_back(std::move(defect));
     }
 }
 
 
 void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::vector<DetectResult>& resultDetects)
 {
-    // Горизонтальное объединение в каждой строке
-    for (auto& batchesRow : batchesDetects) {
-        std::unordered_map<DefectType, std::vector<DetectResult>> mergedDefectsByType;
+    // map для хранения промежуточных результатов вертикального объединения по каждому типу дефектов
+    std::unordered_map<DefectType, std::vector<DetectResult>> verticalMerged;
 
+    // по строкам
+    for (auto& batchesRow : batchesDetects) {
+
+        // горизонтальное объединение по строке (по классам)
+        std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
+
+        // по батчам
         for (auto& batch : batchesRow) {
+
+            // по дефектам
             for (auto& defect : batch.detects) {
-                horizontalDefect(defect, mergedDefectsByType[static_cast<DefectType>(defect.klass)]);
+
+                //соединяем тут с дефектами данного класса (передаем вектор дефектов данного класса)
+                horizontalDefect(defect, horizontalMerged[static_cast<DefectType>(defect.klass)]);
             }
         }
 
-        // Перемещаем объединенные дефекты в resultDetects
-        for (auto it = mergedDefectsByType.begin(); it != mergedDefectsByType.end(); ++it) {
+        // Вертикальное объединение результатов этой строки (по классам)
+        for (auto it = horizontalMerged.begin(); it != horizontalMerged.end(); ++it) {
             DefectType defectType = it->first;
             std::vector<DetectResult>& defects = it->second;
+
             for (auto& defect : defects) {
-                resultDetects.emplace_back(std::move(defect));
+                //передаем вектор дефектов данного класса
+                verticalDefect(defect, verticalMerged[defectType]); 
             }
         }
     }
 
-    // Вертикальное объединение по всем строкам
-    std::vector<DetectResult> mergedVerticalDefects;
-    for (auto& defect : resultDetects) {
-        verticalDefect(defect, mergedVerticalDefects);
+    // Перемещаем окончательные объединенные дефекты в resultDetects
+    for (auto it = verticalMerged.begin(); it != verticalMerged.end(); ++it) {
+        std::vector<DetectResult>& defects = it->second;
+        for (auto& defect : defects) {
+            resultDetects.emplace_back(std::move(defect));
+        }
     }
-
-    resultDetects = std::move(mergedVerticalDefects);
 }
 
 
