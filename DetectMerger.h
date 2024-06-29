@@ -18,15 +18,6 @@
  */
 
 
-//cv::Rect2i mergeRects(const cv::Rect2i& r1, const cv::Rect2i& r2)
-//{
-//    int x = std::min(r1.x, r2.x);
-//    int y = std::min(r1.y, r2.y);
-//    int width = std::max(r1.x + r1.width, r2.x + r2.width) - x;
-//    int height = std::max(r1.y + r1.height, r2.y + r2.height) - y;
-//    return cv::Rect2i(x, y, width, height);
-//}
-
 // Сопоставление ID класса дефекта с его строковым представлением
 std::unordered_map<int, std::string> defectClassMapping = {
     {0, "C.2.3"}, {1, "C.2.1"}, {2, "T.1.4"}, {3, "C.2.4"},
@@ -37,19 +28,16 @@ std::unordered_map<int, std::string> defectClassMapping = {
     {20, "T.2.2.1"}, {21, "C.1.2"}, {22, "T.3.2"}, {23, "B.1"}
 };
 
-// Функция для преобразования строки класса дефекта в DefectType
-DefectType classifyDefect(const std::string& defectClass) {
-    for (const auto& pair : defectClassMapping) {
-        if (pair.second == defectClass) {
-            if (defectClass == "B.7") {
-                return DefectType::Seam;
-            }
-            else {
-                return DefectType::Default;
-            }
+// Функция для преобразования id класса дефекта в DefectType
+DefectType classifyDefect(int klass) {
+    auto it = defectClassMapping.find(klass);
+    if (it != defectClassMapping.end()) {
+        const std::string& defectClass = it->second;
+        if (defectClass == "B.7") {
+            return DefectType::Seam;
         }
     }
-    return DefectType::Default; // Возвращаем Default, если класс не найден
+    return DefectType::Default;
 }
 
 cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, const cv::Rect2i& r2)
@@ -132,39 +120,61 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
 {
     // map для хранения промежуточных результатов вертикального объединения по каждому типу дефектов
     std::unordered_map<DefectType, std::vector<DetectResult>> verticalMerged;
+    std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
 
     // по строкам
     for (auto& batchesRow : batchesDetects) {
-
-        // горизонтальное объединение по строке (по классам)
-        std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
 
         // по батчам
         for (auto& batch : batchesRow) {
 
             // по дефектам
             for (auto& defect : batch.detects) {
+                DefectType defectType = classifyDefect(defect.klass);
+                switch (defectType) {
+                case DefectType::Seam:
+                    horizontalDefect(defect, horizontalMerged[defectType]);
+                    break;
 
-                //соединяем тут с дефектами данного класса (передаем вектор дефектов данного класса)
-                horizontalDefect(defect, horizontalMerged[static_cast<DefectType>(defect.klass)]);
+                /*
+                * Для какого-нибудь вертикального дефекта
+                case DefectType::VerticalFirst:
+                    verticalDefect(defect, verticalMerged[defectType]);
+                    break;
+                */
+                default:
+                    resultDetects.push_back(defect);
+                    break;
+                }
             }
         }
 
-        // Вертикальное объединение результатов этой строки (по классам)
-        for (auto it = horizontalMerged.begin(); it != horizontalMerged.end(); ++it) {
-            DefectType defectType = it->first;
-            std::vector<DetectResult>& defects = it->second;
-
-            for (auto& defect : defects) {
-                //передаем вектор дефектов данного класса
-                verticalDefect(defect, verticalMerged[defectType]); 
+        // Вертикальное объединение результатов этой строки для дефектов типа Seam
+        for (auto& [defectType, defects] : horizontalMerged) {
+            if (defectType == DefectType::Seam) {
+                for (const auto& defect : defects) {
+                    verticalDefect(defect, verticalMerged[defectType]);
+                }
             }
         }
     }
 
+    /*
+    * Также для вертикального
+    // Объединение результатов для дефектов типа VerticalFirst по горизонтали
+    for (auto& [defectType, defects] : verticalMerged) {
+        if (defectType == DefectType::VerticalFirst) {
+            std::vector<DetectResult> finalMerged;
+            for (const auto& defect : defects) {
+                horizontalDefect(defect, finalMerged);
+            }
+            verticalMerged[defectType] = std::move(finalMerged);
+        }
+    }
+    */
+
     // Перемещаем окончательные объединенные дефекты в resultDetects
-    for (auto it = verticalMerged.begin(); it != verticalMerged.end(); ++it) {
-        std::vector<DetectResult>& defects = it->second;
+    for (auto& [defectType, defects] : verticalMerged) {
         for (auto& defect : defects) {
             resultDetects.emplace_back(std::move(defect));
         }

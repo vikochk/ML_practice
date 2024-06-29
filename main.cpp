@@ -4,15 +4,13 @@
 #include <unordered_map>
 #include <cmath>
 
-void addDefect(std::vector<std::vector<BatchResult>>& inputBatchesDefects, int i, int j, int x, int y, int width, int height, const std::string& defectClass)
+void addDefect(std::vector<std::vector<BatchResult>>& inputBatchesDefects, int i, int j, 
+               int x, int y, int width, int height, const std::string& defectClass)
 {
     DetectResult defect;
     defect.rect = cv::Rect2i(x, y, width, height);
     defect.prob = 0.95f; // пока фиксированная вероятность 
     defect.mask = cv::Mat::ones(height, width, CV_8UC1) * 255;
-
-    // Преобразуем строку defectClass в тип DefectType с помощью classifyDefect
-    DefectType defectType = classifyDefect(defectClass);
 
     // Преобразуем defectClass в int (klass)
     int klass = -1; // По умолчанию -1 или другое значение, если не найдено
@@ -97,37 +95,52 @@ int main()
                     addDefect(inputBatchesDefects, i, j, j * 500 + 200, 800, 300, 100, "B.7");
                 }
 
-                // Пример для шва, пересекающего четыре батча (250, 450 длина 500 ширина 50)
+                // Пример для шва, пересекающего четыре батча (250, 450 длина 500 ширина 100)
                 //А
-                if (i == 0 && j == 0) {
+                if (i == 1 && j == 0) {
                    addDefect(inputBatchesDefects, i, j, 250, 950, 250, 50, "B.7");
                 }
                 //C
-                if (i == 0 && j == 1) {
+                if (i == 1 && j == 1) {
                    addDefect(inputBatchesDefects, i, j, 500, 950, 250, 50, "B.7");
                 }
                 //B
-                if (i == 1 && j == 0) {
-                    addDefect(inputBatchesDefects, i, j, 260, 1010, 245, 50, "B.7");
+                if (i == 2 && j == 0) {
+                    addDefect(inputBatchesDefects, i, j, 260, 1010, 240, 50, "B.7");
                 }
                 //D
-                if (i == 1 && j == 1) {
+                if (i == 2 && j == 1) {
                    addDefect(inputBatchesDefects, i, j, 500, 1000, 250, 50, "B.7");
                 }
 
-                // Пример для шва, пересекающего четыре батча (1250, 450 длина 500 ширина 50)
-                if (i == 0 && j == 2) {
+                // Пример для шва, пересекающего четыре батча (1250, 450 длина 500 ширина 100)
+                if (i == 1 && j == 2) {
                     addDefect(inputBatchesDefects, i, j, 1250, 950, 250, 50, "B.7");
                 }
-                if (i == 0 && j == 3) {
+                if (i == 1 && j == 3) {
                     addDefect(inputBatchesDefects, i, j, 1500, 950, 250, 50, "B.7");
                 }
-                if (i == 1 && j == 2) {
+                if (i == 2 && j == 2) {
                     addDefect(inputBatchesDefects, i, j, 1250, 1000, 250, 50, "B.7");
                 }
-                if (i == 1 && j == 3) {
+                if (i == 2 && j == 3) {
                     addDefect(inputBatchesDefects, i, j, 1500, 1000, 250, 50, "B.7");
                 }
+
+                // Пример пятен
+                if (i == 0 && j == 3) {
+                    addDefect(inputBatchesDefects, i, j, 1300, 200, 30, 30, "B.4");
+                }
+                if (i == 2 && j == 3) {
+                    addDefect(inputBatchesDefects, i, j, 1280, 1200, 30, 30, "B.4");
+                }
+                if (i == 2 && j == 0) {
+                    addDefect(inputBatchesDefects, i, j, 70, 1160, 30, 35, "B.4");
+                }
+                if (i == 2 && j == 0) {
+                    addDefect(inputBatchesDefects, i, j, 100, 1200, 30, 30, "B.4");
+                }
+
             }
         }
     }
