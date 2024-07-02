@@ -36,6 +36,9 @@ DefectType classifyDefect(int klass) {
         if (defectClass == "B.7") {
             return DefectType::Seam;
         }
+        else if (defectClass == "O.2.3") {
+            return DefectType::HangingString;
+        }
     }
     return DefectType::Default;
 }
@@ -135,6 +138,11 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
                 case DefectType::Seam:
                     horizontalDefect(defect, horizontalMerged[defectType]);
                     break;
+                /*
+                case DefectType::HangingString:
+                    * Обработка висячей нити
+                    break;
+                */
 
                 /*
                 * Для какого-нибудь вертикального дефекта
