@@ -45,12 +45,17 @@ DefectType classifyDefect(int klass) {
 
 cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, const cv::Rect2i& r2)
 {
+    // Определение объединенного прямоугольника, который охватывает оба дефекта
     cv::Rect2i mergedRect = r1 | r2;
-    cv::Mat mergedMask = cv::Mat::zeros(mergedRect.size(), CV_8UC1);
 
+    // Создание белой маски размером объединенного прямоугольника
+    cv::Mat mergedMask = cv::Mat::ones(mergedRect.size(), CV_8UC1) * 255;
+
+    // Вычисление позиций r1 и r2 относительно объединенного прямоугольника
     cv::Rect2i r1_in_merged = cv::Rect2i(r1.x - mergedRect.x, r1.y - mergedRect.y, r1.width, r1.height);
     cv::Rect2i r2_in_merged = cv::Rect2i(r2.x - mergedRect.x, r2.y - mergedRect.y, r2.width, r2.height);
 
+    // Копирование масок m1 и m2 в объединенную маску в соответствующих позициях
     m1.copyTo(mergedMask(r1_in_merged));
     m2.copyTo(mergedMask(r2_in_merged));
 
