@@ -54,6 +54,7 @@ void addHangingSting(std::vector<std::vector<BatchResult>>& inputBatchesDefects,
     inputBatchesDefects[i][j].detects.push_back(defect);
 }
 
+/*
 cv::Mat displayDefects(const std::vector<std::vector<BatchResult>>& inputBatchesDefects) 
 {
     cv::Mat canvas = cv::Mat::zeros(2500, 2000, CV_8UC1);
@@ -81,7 +82,31 @@ cv::Mat displayDefects(const std::vector<std::vector<BatchResult>>& inputBatches
 
     return resizedCanvas;
 }
+*/
 
+cv::Mat displayDefects(const std::vector<DetectResult>& resultDefects)
+{
+    cv::Mat canvas = cv::Mat::zeros(2500, 2000, CV_8UC1);
+
+    // Проходим по всем дефектам
+    for (const auto& defect : resultDefects) {
+        // Определяем ROI для текущего дефекта
+        cv::Rect roi(defect.rect.x, defect.rect.y, defect.rect.width, defect.rect.height);
+
+        // Определяем ROI для маски дефекта на полотне
+        cv::Rect maskRoi(cv::Point(0, 0), defect.mask.size());
+
+        // Обрезаем маску до размера ROI, чтобы ее можно было наложить на полотно
+        cv::Mat maskROI = defect.mask(maskRoi);
+
+        // Наложение маски дефекта на полотно
+        maskROI.copyTo(canvas(roi), maskROI);
+    }
+    cv::Mat resizedCanvas;
+    cv::resize(canvas, resizedCanvas, cv::Size(canvas.cols / 3, canvas.rows / 3));
+
+    return resizedCanvas;
+}
 
 int main()
 {
@@ -227,16 +252,8 @@ int main()
 
                     addHangingSting(inputBatchesDefects, i, j, 505, 1580, 35, 80, "O.2.3", currentMask);
                 }
-
             }
         }
-
-        // Отображение всех дефектов на одном изображении
-        cv::Mat combinedImage = displayDefects(inputBatchesDefects);
-
-        cv::imshow("Combined Defects", combinedImage);
-        cv::waitKey(0);
-        cv::destroyAllWindows();
     }
 
 
@@ -248,6 +265,14 @@ int main()
         mergeDefectsMy(std::move(inputBatchesDefects), resultDefects);
         //базовая функция для тестирования
         //mergeDefects(std::move(inputBatchesDefects), resultDefects);  // используем move, чтобы не копировать входные дефекты в функцию, а переместить их
+
+        // Отображение всех дефектов на одном изображении
+        cv::Mat combinedImage = displayDefects(resultDefects);
+
+        cv::imshow("Combined Defects", combinedImage);
+        cv::waitKey(0);
+        cv::destroyAllWindows();
+
 
         // Выводим результаты
         for (const auto& defect : resultDefects)
