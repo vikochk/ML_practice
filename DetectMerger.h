@@ -48,6 +48,8 @@ cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, c
     // Определение объединенного прямоугольника, который охватывает оба дефекта
     cv::Rect2i mergedRect = r1 | r2;
 
+    //cv::Mat mergedMask = cv::Mat::zeros(mergedRect.size(), CV_8UC1);
+
     // Создание белой маски размером объединенного прямоугольника
     cv::Mat mergedMask = cv::Mat::ones(mergedRect.size(), CV_8UC1) * 255;
 
@@ -101,9 +103,6 @@ void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verti
         expandedRect.width += 20;
         expandedRect.height += 20;
 
-        // разница между дефектами одного класса может быть до 10 пикселей 
-        //if (std::abs(mergedDefect.rect.x - defect.rect.x) <= 10 &&
-        //    std::abs(mergedDefect.rect.y + mergedDefect.rect.height - defect.rect.y) <= 10)
         // Проверяем пересечение расширенных рамок
         if ((expandedRect & mergedDefect.rect).area() >= 0)
         {
@@ -120,116 +119,74 @@ void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verti
     }
     //если вертикально не объединяется, то записываем в результат
     if (!mergedVer) {
-        verticalMergedDefectsOneType.emplace_back(std::move(defect));
+        verticalMergedDefectsOneType.push_back(defect);
     }
 }
-
-
-//идея - объединять нити если (расширенная рамка нити 1 содержит нить 2) & (расширенная рамка нити 2 содержит нить 1)
-//void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& hangingStringMergedDefects)
-//{
-//    bool merged = false;
-//    for (auto& mergedDefect : hangingStringMergedDefects)
-//    {
-//        // Расширяем рамку текущего дефекта на 10 пикселей в каждую сторону
-//        cv::Rect2i expandedRect1 = defect.rect;
-//        expandedRect1.x -= 10;
-//        expandedRect1.y -= 10;
-//        expandedRect1.width += 20;
-//        expandedRect1.height += 20;
-//
-//        // Расширяем рамку объединенного дефекта на 10 пикселей в каждую сторону
-//        cv::Rect2i expandedRect2 = mergedDefect.rect;
-//        expandedRect2.x -= 10;
-//        expandedRect2.y -= 10;
-//        expandedRect2.width += 20;
-//        expandedRect2.height += 20;
-//
-//        // Проверяем, что расширенные области остаются в пределах размеров их масок
-//        if (expandedRect1.x < 0)
-//            expandedRect1.x = 0;
-//        if (expandedRect1.y < 0)
-//            expandedRect1.y = 0;
-//        if (expandedRect1.x + expandedRect1.width > defect.mask.cols)
-//            expandedRect1.width = defect.mask.cols - expandedRect1.x;
-//        if (expandedRect1.y + expandedRect1.height > defect.mask.rows)
-//            expandedRect1.height = defect.mask.rows - expandedRect1.y;
-//
-//        if (expandedRect2.x < 0)
-//            expandedRect2.x = 0;
-//        if (expandedRect2.y < 0)
-//            expandedRect2.y = 0;
-//        if (expandedRect2.x + expandedRect2.width > mergedDefect.mask.cols)
-//            expandedRect2.width = mergedDefect.mask.cols - expandedRect2.x;
-//        if (expandedRect2.y + expandedRect2.height > mergedDefect.mask.rows)
-//            expandedRect2.height = mergedDefect.mask.rows - expandedRect2.y;
-//
-//        // Проверяем, что расширенная маска первого дефекта содержит в себе второй дефект
-//        cv::Mat expandedMask1 = cv::Mat::zeros(expandedRect1.size(), CV_8UC1);
-//        cv::Rect2i intersectRect1 = expandedRect1 & defect.rect;
-//        if (intersectRect1.area() > 0)
-//        {
-//            cv::Mat croppedMask1 = defect.mask(intersectRect1);
-//            croppedMask1.copyTo(expandedMask1(cv::Rect(intersectRect1.tl() - expandedRect1.tl(), intersectRect1.size())));
-//        }
-//        // Проверяем наличие второго дефекта в расширенной области первого дефекта
-//        cv::Mat intersection = expandedMask1 & mergedDefect.mask;
-//        bool secondDefectInExpandedRegion1 = cv::countNonZero(intersection) > 0;
-//
-//        // Проверяем, что расширенная маска второго дефекта содержит в себе первый дефект
-//        cv::Mat expandedMask2 = cv::Mat::zeros(expandedRect2.size(), CV_8UC1);
-//        cv::Rect2i intersectRect2 = expandedRect2 & mergedDefect.rect;
-//        if (intersectRect2.area() > 0)
-//        {
-//            cv::Mat croppedMask2 = mergedDefect.mask(intersectRect2);
-//            croppedMask2.copyTo(expandedMask2(cv::Rect(intersectRect2.tl() - expandedRect2.tl(), intersectRect2.size())));
-//        }
-//        bool firstDefectInExpandedRegion2 = cv::countNonZero(expandedMask2 & defect.mask) > 0;
-//
-//        // Если оба условия выполняются, то объединяем дефекты
-//        if (secondDefectInExpandedRegion1 && firstDefectInExpandedRegion2)
-//        {
-//            // Объединяем рамки
-//            cv::Rect2i newRect = mergedDefect.rect | defect.rect;
-//
-//            // Объединяем маски дефектов
-//            cv::Mat newMask = mergeMasks(mergedDefect.mask, defect.mask, mergedDefect.rect, defect.rect);
-//
-//            // Обновляем параметры объединенного дефекта
-//            mergedDefect.rect = newRect;
-//            mergedDefect.mask = newMask;
-//            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); // Берем максимальную вероятность
-//            merged = true;
-//            break;
-//        }
-//    }
-//    // Если дефект не был объединен ни с одним из существующих, добавляем его в список
-//    if (!merged) {
-//        hangingStringMergedDefects.emplace_back(defect);
-//    }
-//}
 
 
 bool checkForRealDefectsInIntersection(const DetectResult& defect, const DetectResult& mergedDefect)
 {
     cv::Rect2i expandedRect = defect.rect;
-    expandedRect.x -= 10;
-    expandedRect.y -= 10;
-    expandedRect.width += 20;
-    expandedRect.height += 20;
+    int rectExtension = 10;
+    expandedRect.x -= rectExtension;
+    expandedRect.y -= rectExtension;
+    expandedRect.width += 2 * rectExtension;
+    expandedRect.height += 2 * rectExtension;
 
     cv::Rect2i intersectionRect = expandedRect & mergedDefect.rect;
+    //std::cout << "Defect: " << defect.rect.x << " " << defect.rect.y << " "
+    //    << defect.rect.width << " " << defect.rect.height << std::endl;
+
+    //std::cout << "Intersection: " << intersectionRect.x << " " << intersectionRect.y << " "
+    //    << intersectionRect.width << " " << intersectionRect.height << std::endl;
 
     if (intersectionRect.area() > 0)
     {
-        cv::Rect2i defectMaskROI_rect = intersectionRect & cv::Rect2i(0, 0, defect.mask.cols, defect.mask.rows);
+        // Определяем ROI в пределах маски defect.mask
+        // х и у имеют значение 0, если дефекты пересекаются слева, иначе intersectionRect.* - defect.rect.*
+        int dx = std::max(0, intersectionRect.x - defect.rect.x);
+        int dy = std::max(0, intersectionRect.y - defect.rect.y);
+
+        // Ширина и высота рамки должны быть не меньше rectExtension. Если и так не меньше, то берем минимальное
+        // из ширины/высоты пересечения и доступной ширины/высоты в маске defect
+        int dw = std::max(rectExtension, std::min(intersectionRect.width, defect.mask.cols - dx));
+        int dh = std::max(rectExtension, std::min(intersectionRect.height, defect.mask.rows - dy));
+        // Сложно, но работает только так...
+
+        // Если пересечение происходит в левой части defect, то все хорошо, но если справа, то смотрим 
+        // относительно правого дефекта. Правый - это mergedDefect
+        if (dx + dw > defect.rect.width || dy + dh > defect.rect.height) {
+            dx = std::max(0, intersectionRect.x - mergedDefect.rect.x);
+            dy = std::max(0, intersectionRect.y - mergedDefect.rect.y);
+            dw = intersectionRect.width;
+            dh = intersectionRect.height;
+
+            //std::cout << "defectMaskROI_rect: " << dx << ", " << dy << ", " << dw << ", " << dh << std::endl;
+
+            // Убедимся, что ROI в пределах маски mergedDefect
+            if (dx < 0 || dy < 0 || dx + dw > mergedDefect.mask.cols || dy + dh > mergedDefect.mask.rows) {
+                std::cout << "Intersection is out of mask bounds or dimensions are invalid" << std::endl;
+                return false;
+            }
+        }
+        else {
+            //std::cout << "defectMaskROI_rect: " << dx << ", " << dy << ", " << dw << ", " << dh << std::endl;
+
+            // Убедимся, что ROI в пределах маски defect
+            if (dx < 0 || dy < 0 || dx + dw > defect.mask.cols || dy + dh > defect.mask.rows) {
+                std::cout << "Intersection is out of mask bounds or dimensions are invalid" << std::endl;
+                return false;
+            }
+        }
+        cv::Rect2i defectMaskROI_rect(dx, dy, dw, dh);
+
         cv::Mat defectMaskROI = defect.mask(defectMaskROI_rect);
         return cv::countNonZero(defectMaskROI) > 0;
-
     }
 
     return false;
 }
+
 
 // Функция для обработки дефектов типа "висячая нить" с проверкой наличия дефектов в зоне пересечения
 void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& hangingStringMergedDefects)
@@ -237,31 +194,27 @@ void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& 
     bool merged = false;
     for (auto& mergedDefect : hangingStringMergedDefects)
     {
-        // Расширяем рамку текущего дефекта на 10 пикселей в каждую сторону
-        cv::Rect2i expandedRect = defect.rect;
-        expandedRect.x -= 10;
-        expandedRect.y -= 10;
-        expandedRect.width += 20;
-        expandedRect.height += 20;
-
         bool hasRealDefects = checkForRealDefectsInIntersection(defect, mergedDefect);
 
-        // Проверяем, пересекается ли расширенная рамка текущего дефекта с рамкой объединенного дефекта
+        //std::cout << "defect & mergeDefect: " << defect.rect.x << " " << defect.rect.y << " " << mergedDefect.rect.x 
+        //    << " " << mergedDefect.rect.y << " " << hasRealDefects << std::endl;
+
+        // Проверяем, пересекается ли расширенная рамка текущего дефекта с рамкой объединенного дефектаa
         if (hasRealDefects)
         {
-            // Объединяем рамки
             cv::Rect2i newRect = mergedDefect.rect | defect.rect;
-
-            // Объединяем маски дефектов
             cv::Mat newMask = mergeMasks(mergedDefect.mask, defect.mask, mergedDefect.rect, defect.rect);
 
-            // Обновляем параметры объединенного дефекта
             mergedDefect.rect = newRect;
             mergedDefect.mask = newMask;
-            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); // Берем максимальную вероятность
+            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); 
             merged = true;
+        //    std::cout << "newMask is done. x: " << mergedDefect.rect.x << ", y: " << mergedDefect.rect.y 
+        //        << ", width: " << mergedDefect.rect.width << ", height: " << mergedDefect.rect.height << std::endl;
+
             break;
         }
+        //std::cout << std::endl;
     }
     // Если дефект не был объединен ни с одним из существующих, добавляем его в список
     if (!merged) {
@@ -291,18 +244,15 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
                     break;
  
                 case DefectType::HangingString:
-                     //Обработка висячей нити
                     hangingStringDefect(defect, verticalMerged[defectType]);
-                    //verticalDefect(defect, verticalMerged[defectType]);
                 break;
 
-
-                    /*
-                    * Для какого-нибудь вертикального дефекта
-                    case DefectType::VerticalFirst:
-                        verticalDefect(defect, verticalMerged[defectType]);
-                        break;
-                    */
+                /*
+                * Для какого-нибудь вертикального дефекта
+                case DefectType::VerticalFirst:
+                    verticalDefect(defect, verticalMerged[defectType]);
+                    break;
+                */
                 default:
                     resultDetects.push_back(defect);
                     break;

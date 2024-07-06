@@ -54,36 +54,6 @@ void addHangingSting(std::vector<std::vector<BatchResult>>& inputBatchesDefects,
     inputBatchesDefects[i][j].detects.push_back(defect);
 }
 
-/*
-cv::Mat displayDefects(const std::vector<std::vector<BatchResult>>& inputBatchesDefects)
-{
-    cv::Mat canvas = cv::Mat::zeros(2500, 2000, CV_8UC1);
-
-    // Проходим по всем батчам и дефектам
-    for (size_t i = 0; i < inputBatchesDefects.size(); ++i) {
-        for (size_t j = 0; j < inputBatchesDefects[i].size(); ++j) {
-            for (const auto& defect : inputBatchesDefects[i][j].detects) {
-                // Определяем ROI для текущего дефекта
-                cv::Rect roi(defect.rect.x, defect.rect.y, defect.rect.width, defect.rect.height);
-
-                // Определяем ROI для маски дефекта на полотне
-                cv::Rect maskRoi(cv::Point(0, 0), defect.mask.size());
-
-                // Обрезаем маску до размера ROI, чтобы ее можно было наложить на полотно
-                cv::Mat maskROI = defect.mask(maskRoi);
-
-                // Наложение маски дефекта на полотно
-                maskROI.copyTo(canvas(roi), maskROI);
-            }
-        }
-    }
-    cv::Mat resizedCanvas;
-    cv::resize(canvas, resizedCanvas, cv::Size(canvas.cols / 3, canvas.rows / 3));
-
-    return resizedCanvas;
-}
-*/
-
 cv::Mat displayDefects(const std::vector<DetectResult>& resultDefects)
 {
     cv::Mat canvas = cv::Mat::zeros(2500, 2000, CV_8UC1);
@@ -92,11 +62,7 @@ cv::Mat displayDefects(const std::vector<DetectResult>& resultDefects)
     for (const auto& defect : resultDefects) {
         // Определяем ROI для текущего дефекта
         cv::Rect roi(defect.rect.x, defect.rect.y, defect.rect.width, defect.rect.height);
-
-        // Определяем ROI для маски дефекта на полотне
         cv::Rect maskRoi(cv::Point(0, 0), defect.mask.size());
-
-        // Обрезаем маску до размера ROI, чтобы ее можно было наложить на полотно
         cv::Mat maskROI = defect.mask(maskRoi);
 
         // Наложение маски дефекта на полотно
@@ -218,61 +184,68 @@ int main()
                 // Висячая нить
                 if (i == 3 && j == 0) {
                     cv::Mat currentMask1 = cv::Mat::zeros(cv::Size(55, 70), CV_8UC1);
-                    cv::Point start1(0, 70); // Начальная точка
-                    cv::Point end1(55, 0); // Конечная точка
-                    int thickness = 3; // Толщина линии
-                    cv::line(currentMask1, start1, end1, cv::Scalar(255), thickness);
-
+                    cv::line(currentMask1, cv::Point(0, 70), cv::Point(55, 0), cv::Scalar(255), 3);
                     addHangingSting(inputBatchesDefects, i, j, 200, 1500, 55, 70, "O.2.3", currentMask1);
 
                     cv::Mat currentMask2 = cv::Mat::zeros(cv::Size(25, 60), CV_8UC1);
-                    cv::Point start2(0, 0);
-                    cv::Point end2(25, 60);
-                    cv::line(currentMask2, start2, end2, cv::Scalar(255), 3);
-
+                    cv::line(currentMask2, cv::Point(0, 0), cv::Point(25, 60), cv::Scalar(255), 3);
                     addHangingSting(inputBatchesDefects, i, j, 470, 1500, 25, 60, "O.2.3", currentMask2);
                 }
                 if (i == 2 && j == 0) {
                     cv::Mat currentMask = cv::Mat::zeros(cv::Size(215, 70), CV_8UC1);
-                    cv::Point start1(0, 70);
-                    cv::Point end1(115, 0);
-                    cv::line(currentMask, start1, end1, cv::Scalar(255), 3);
-
-                    cv::Point start2(115, 0);
-                    cv::Point end2(215, 70);
-                    cv::line(currentMask, start2, end2, cv::Scalar(255), 3);
-
+                    cv::line(currentMask, cv::Point(0, 70), cv::Point(115, 0), cv::Scalar(255), 3);
+                    cv::line(currentMask, cv::Point(115, 0), cv::Point(215, 70), cv::Scalar(255), 3);
                     addHangingSting(inputBatchesDefects, i, j, 255, 1430, 215, 70, "O.2.3", currentMask);
                 }
                 if (i == 3 && j == 1) {
                     cv::Mat currentMask = cv::Mat::zeros(cv::Size(35, 80), CV_8UC1);
-                    cv::Point start(0, 0);
-                    cv::Point end(35, 80);
-                    cv::line(currentMask, start, end, cv::Scalar(255), 3);
-
+                    cv::line(currentMask, cv::Point(0, 0), cv::Point(35, 80), cv::Scalar(255), 3);
                     addHangingSting(inputBatchesDefects, i, j, 505, 1580, 35, 80, "O.2.3", currentMask);
                 }
 
-                //// Батч (0, 0) - линия от (410, 410) до (490, 490)
-                //if (i == 0 && j == 0) {
-                //    cv::Mat mask = cv::Mat::zeros(cv::Size(90, 90), CV_8UC1);
-                //    cv::line(mask, cv::Point(0, 0), cv::Point(80, 80), cv::Scalar(255), 5);  // Линия от (0, 0) до (80, 80)
-                //    addHangingSting(inputBatchesDefects, i, j, 410, 410, 90, 90, "O.2.3", mask);
-                //}
+                // Батч (0, 0) - линия от (410, 410) до (490, 490)
+                if (i == 0 && j == 0) {
+                    cv::Mat mask = cv::Mat::zeros(cv::Size(90, 90), CV_8UC1);
+                    cv::line(mask, cv::Point(0, 0), cv::Point(80, 80), cv::Scalar(255), 5);  // Линия от (0, 0) до (80, 80)
+                    addHangingSting(inputBatchesDefects, i, j, 410, 410, 90, 90, "O.2.3", mask);
+                }
 
-                //// Батч (1, 1) - линия от (500, 500) до (1000, 1000)
-                //if (i == 1 && j == 1) {
-                //    cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                //    cv::line(mask, cv::Point(0, 0), cv::Point(500, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
-                //    addHangingSting(inputBatchesDefects, i, j, 500, 500, 500, 500, "O.2.3", mask);
-                //}
+                // Батч (1, 1) - линия от (500, 500) до (1000, 1000)
+                if (i == 1 && j == 1) {
+                    cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
+                    cv::line(mask, cv::Point(0, 0), cv::Point(500, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
+                    addHangingSting(inputBatchesDefects, i, j, 500, 500, 500, 500, "O.2.3", mask);
+                }
 
-                //// Батч (2, 2) - линия от (1500, 1000) до (1000, 1500)
-                //if (i == 2 && j == 2) {
-                //    cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                //    cv::line(mask, cv::Point(500, 0), cv::Point(0, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
-                //    addHangingSting(inputBatchesDefects, i, j, 1000, 1000, 500, 500, "O.2.3", mask);
-                //}
+                // Батч (2, 2) - линия от (1500, 1000) до (1000, 1500)
+                if (i == 2 && j == 2) {
+                    cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
+                    cv::line(mask, cv::Point(500, 0), cv::Point(0, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
+                    addHangingSting(inputBatchesDefects, i, j, 1000, 1000, 500, 500, "O.2.3", mask);
+                }
+
+                // Нитки "галочкой"
+                if (i == 4 && j == 0) {
+                    cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                    cv::line(mask1, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5); 
+                    addHangingSting(inputBatchesDefects, i, j, 0, 2000, 100, 100, "O.2.3", mask1);
+
+                    cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                    cv::line(mask2, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5); 
+                    addHangingSting(inputBatchesDefects, i, j, 105, 2000, 100, 100, "O.2.3", mask2);
+                }
+
+                // Нитки, пересекающиеся ровно на левом краю полотна
+                if (i == 0 && j == 0) {
+                    cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                    cv::line(mask1, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
+                    addHangingSting(inputBatchesDefects, i, j, 0, 108, 100, 100, "O.2.3", mask1);
+
+                    cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                    cv::line(mask2, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5);
+                    addHangingSting(inputBatchesDefects, i, j, 0, 0, 100, 100, "O.2.3", mask2);
+                }
+
             }
         }
     }
@@ -290,17 +263,17 @@ int main()
         // Отображение всех дефектов на одном изображении
         cv::Mat combinedImage = displayDefects(resultDefects);
         // Выводим результаты
+        cv::imshow("Combined Defects", combinedImage);
+        cv::waitKey(0);
+        cv::destroyAllWindows();
+
         for (const auto& defect : resultDefects)
         {
             std::cout << "Defect class: " << defect.klass
                 << ", Rect: (" << defect.rect.x << ", " << defect.rect.y << ", "
                 << defect.rect.width << ", " << defect.rect.height << ")"
                 << ", Probability: " << defect.prob << std::endl;
-        }
-        cv::imshow("Combined Defects", combinedImage);
-        cv::waitKey(0);
-        cv::destroyAllWindows();
-    
+        }    
     }
     return 0;
 }
