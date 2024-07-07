@@ -1,7 +1,7 @@
 #pragma once 
 #include <vector> 
 #include <unordered_map>
-
+#include <iostream>
 #include "DataStructs.h" 
 
 /**
@@ -108,6 +108,37 @@ void horizontalDefect(const DetectResult& defect, std::vector<DetectResult>& hor
 }
 
 
+
+void verticalDefectHorizontally(const DetectResult& defect, std::vector<DetectResult>& verticalMergedDefectsOneType) {
+    bool merged = false;
+
+    for (auto& mergedDefect : verticalMergedDefectsOneType) {
+        cv::Rect2i extendedRect = mergedDefect.rect;
+        extendedRect.x = (mergedDefect.rect.x < 10) ? 0 : mergedDefect.rect.x - 10;
+
+        // Проверяем, пересекаются ли расширенные дефекты
+        if (defect.rect.x + defect.rect.width >= extendedRect.x &&
+            defect.rect.x <= mergedDefect.rect.x + mergedDefect.rect.width) {
+
+            // Объединяем дефекты
+            cv::Rect2i newRect = mergedDefect.rect | defect.rect;
+            cv::Mat newMask = mergeMasks(mergedDefect.mask, defect.mask, mergedDefect.rect, defect.rect);
+
+            mergedDefect.rect = newRect;
+            mergedDefect.mask = newMask;
+            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); // берем максимальную вероятность
+            merged = true;
+            break;
+        }
+    }
+
+    // Если дефект не был объединен ни с одним из существующих, добавляем его в список
+    if (!merged) {
+        verticalMergedDefectsOneType.emplace_back(defect);
+    }
+}
+
+
 void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verticalMergedDefectsOneType)
 {
     bool mergedVer = false;
@@ -115,13 +146,17 @@ void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verti
     {
         // Расширяем рамку одного из дефектов для проверки окрестности
         cv::Rect2i expandedRect = defect.rect;
-        expandedRect.x -= 10;
-        expandedRect.y -= 10;
+        // Расширяем рамку, не вычитая -10, если x и y равны 0
+        expandedRect.x = (defect.rect.x < 10) ? 0 : defect.rect.x - 10;
+        expandedRect.y = (defect.rect.y < 10) ? 0 : defect.rect.y - 10;
         expandedRect.width += 20;
         expandedRect.height += 20;
 
+        // Вычисляем пересечение расширенной рамки с текущим дефектом
+        cv::Rect2i intersectionRect = expandedRect & mergedDefect.rect;
+
         // Проверяем пересечение расширенных рамок
-        if ((expandedRect & mergedDefect.rect).area() >= 0)
+        if (intersectionRect.area() > 0)
         {
             // Объединяем текущий дефект с уже найденным
             cv::Rect2i newRect = mergedDefect.rect | defect.rect;
@@ -134,11 +169,13 @@ void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verti
             break;
         }
     }
-    //если вертикально не объединяется, то записываем в результат
+
+    // Если вертикально не объединяется, то записываем в результат
     if (!mergedVer) {
         verticalMergedDefectsOneType.push_back(defect);
     }
 }
+
 
 const int rectExtension = 10;
 
@@ -146,14 +183,16 @@ bool checkForRealDefectsInIntersection(const DetectResult& defect, const DetectR
 {
     // Расширяем дефектный прямоугольник для учета возможных пересечений
     cv::Rect2i expandedRect = defect.rect;
-    expandedRect.x -= rectExtension;
-    expandedRect.y -= rectExtension;
+    expandedRect.x = (defect.rect.x < rectExtension) ? 0 : defect.rect.x - rectExtension;
+    expandedRect.y = (defect.rect.y < rectExtension) ? 0 : defect.rect.y - rectExtension;
     expandedRect.width += 2 * rectExtension;
     expandedRect.height += 2 * rectExtension;
 
     // Вычисляем пересечение между расширенным дефектом и объединенным дефектом
     cv::Rect2i intersectionRect = expandedRect & mergedDefect.rect;
 
+    // const int rectExtension = 10 включительно
+    // Проверка на пересечение или соприкосновение
     if (intersectionRect.area() > 0)
     {
         // Определяем ROI в пределах маски defect.mask
@@ -193,7 +232,7 @@ bool checkForRealDefectsInIntersection(const DetectResult& defect, const DetectR
 }
 
 
-// Функция для обработки дефектов типа "висячая нить" с проверкой наличия дефектов в зоне пересечения
+// Функция для обработки дефектов с проверкой наличия дефектов в зоне пересечения
 void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& hangingStringMergedDefects)
 {
     bool merged = false;
@@ -209,7 +248,7 @@ void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& 
 
             mergedDefect.rect = newRect;
             mergedDefect.mask = newMask;
-            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); 
+            mergedDefect.prob = std::max(mergedDefect.prob, defect.prob);
             merged = true;
             break;
         }
@@ -220,16 +259,18 @@ void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& 
     }
 }
 
-
 void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::vector<DetectResult>& resultDetects)
 {
     // map для хранения промежуточных результатов вертикального объединения по каждому типу дефектов
     std::unordered_map<DefectType, std::vector<DetectResult>> verticalMerged;
     std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
     std::unordered_map<DefectType, std::vector<DetectResult>> otherMerged;
-
+    std::unordered_map<DefectType, std::vector<DetectResult>> verticalMergedHorizontally;
     // по строкам
     for (auto& batchesRow : batchesDetects) {
+
+        bool vertical = 0;
+        bool horizontal = 0;
 
         // по батчам
         for (auto& batch : batchesRow) {
@@ -237,73 +278,63 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
             // по дефектам
             for (auto& defect : batch.detects) {
                 DefectType defectType = classifyDefect(defect.klass);
+                // Выбираем функцию обработки в зависимости от типа дефекта
                 switch (defectType) {
-                    case DefectType::Seam:
-                    case DefectType::ThreadSpan:
-                    case DefectType::DoubleThreadX:
-                    case DefectType::LightStrip:
-                    case DefectType::Thickening:
-                    case DefectType::ThreadThickeningX:
-                    case DefectType::DifferentThreadX:
-                    case DefectType::IncompleteDoubleThread:
-                    case DefectType::SparseThread:
-                        horizontalDefect(defect, horizontalMerged[defectType]);
-                        break;
-
-                    case DefectType::Dissection:
-                    case DefectType::Blisna:
-                    case DefectType::DoubleThreadY:
-                    case DefectType::ThreadThickeningY:
-                    case DefectType::DifferentThreadY:
-                        verticalDefect(defect, verticalMerged[defectType]);
-                        break;
-
-                    case DefectType::HangingString:
-                    case DefectType::StuffedFluff:
-                    case DefectType::Fold:
-                    case DefectType::Crease:
-                    case DefectType::WaterLeak:
-                    case DefectType::Spot:
-                        hangingStringDefect(defect, otherMerged[defectType]);
-                        break;
-
-                    case DefectType::ViolationOfWeaving:
-                    case DefectType::Contamination:
-                    case DefectType::Knot:
-                    case DefectType::Default:
-                        resultDetects.push_back(defect);
-                        break;
-
-                    default:
-                        resultDetects.push_back(defect);
-                        break;
+                case DefectType::Seam:
+                case DefectType::ThreadSpan:
+                case DefectType::DoubleThreadX:
+                case DefectType::LightStrip:
+                case DefectType::ThreadThickeningX:
+                case DefectType::DifferentThreadX:
+                case DefectType::IncompleteDoubleThread:
+                case DefectType::SparseThread:
+                    horizontalDefect(defect, horizontalMerged[defectType]);
+                    horizontal = 1;
+                    break;
+                case DefectType::Thickening:
+                case DefectType::HangingString:
+                case DefectType::StuffedFluff:
+                case DefectType::Contamination:
+                case DefectType::Knot:
+                case DefectType::Spot:
+                    hangingStringDefect(defect, otherMerged[defectType]);
+                    break;
+                case DefectType::Dissection:
+                case DefectType::Blisna:
+                case DefectType::DoubleThreadY:
+                case DefectType::ThreadThickeningY:
+                case DefectType::Fold:
+                case DefectType::Crease:
+                case DefectType::WaterLeak:
+                case DefectType::ViolationOfWeaving:
+                    verticalDefectHorizontally(defect, verticalMergedHorizontally[defectType]);
+                    vertical = 1;
+                    break;
+                default:
+                    resultDetects.push_back(defect); 
+                    break;
                 }
             }
         }
 
-        // Вертикальное объединение результатов этой строки для дефектов типа Seam
+        // Вертикальное объединение результатов этой строки для горизонтальных дефектов
         for (auto& [defectType, defects] : horizontalMerged) {
-            if (defectType == DefectType::Seam) {
+            if (horizontal) {
+                for (const auto& defect : defects) {
+                    verticalDefect(defect, verticalMerged[defectType]);
+                }
+            }
+        }
+
+        // Вертикальное объединение результатов этой строки для толстых вертикальных дефектов
+        for (auto& [defectType, defects] : verticalMergedHorizontally) {
+            if (vertical){
                 for (const auto& defect : defects) {
                     verticalDefect(defect, verticalMerged[defectType]);
                 }
             }
         }
     }
-
-    /*
-    * Также для вертикального
-    // Объединение результатов для дефектов типа VerticalFirst по горизонтали
-    for (auto& [defectType, defects] : verticalMerged) {
-        if (defectType == DefectType::VerticalFirst) {
-            std::vector<DetectResult> finalMerged;
-            for (const auto& defect : defects) {
-                horizontalDefect(defect, finalMerged);
-            }
-            verticalMerged[defectType] = std::move(finalMerged);
-        }
-    }
-    */
 
     // Перемещаем окончательные объединенные дефекты в resultDetects
     for (auto& [defectType, defects] : verticalMerged) {
