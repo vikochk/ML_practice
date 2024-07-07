@@ -235,7 +235,7 @@ int main()
                     addHangingSting(inputBatchesDefects, i, j, 105, 2000, 100, 100, "O.2.3", mask2);
                 }
 
-                // Нитки, пересекающиеся ровно на левом краю полотна
+                // Нитки, пересекающиеся ровно на левом краю полотна и совпадающие
                 if (i == 0 && j == 0) {
                     cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
                     cv::line(mask1, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
@@ -244,6 +244,15 @@ int main()
                     cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
                     cv::line(mask2, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5);
                     addHangingSting(inputBatchesDefects, i, j, 0, 0, 100, 100, "O.2.3", mask2);
+
+                    cv::Mat mask3 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                    cv::line(mask3, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
+                    addHangingSting(inputBatchesDefects, i, j, 50, 150, 100, 100, "O.2.3", mask3);
+                }
+
+                // Примеры рассечки
+                if (i == 0 && j <= 4) {
+                    addDefect(inputBatchesDefects, i, j, 1800, 20 + 500 * j, 20, 480, "T.2.2.1");
                 }
 
             }

@@ -33,12 +33,29 @@ DefectType classifyDefect(int klass) {
     auto it = defectClassMapping.find(klass);
     if (it != defectClassMapping.end()) {
         const std::string& defectClass = it->second;
-        if (defectClass == "B.7") {
-            return DefectType::Seam;
-        }
-        else if (defectClass == "O.2.3") {
-            return DefectType::HangingString;
-        }
+        if (defectClass == "B.7") return DefectType::Seam;  // Шов
+        else if (defectClass == "T.1.1") return DefectType::Blisna;     // Близна
+        else if (defectClass == "T.1.2") return DefectType::ThreadSpan; // Пролет
+        else if (defectClass == "T.1.3") return DefectType::DoubleThreadY;  // Двойная нить по основе 
+        else if (defectClass == "T.1.4") return DefectType::DoubleThreadX;  // Двойная нить по утку 
+        else if (defectClass == "T.2.1") return DefectType::ViolationOfWeaving; // Нарушение ткацкого переплетения 
+        else if (defectClass == "T.2.2.1") return DefectType::Dissection;   // Рассечка
+        else if (defectClass == "T.2.2.2") return DefectType::StuffedFluff; // Редкое место (Затканный пух) 
+        else if (defectClass == "T.2.6") return DefectType::IncompleteDoubleThread; // Недолет
+        else if (defectClass == "T.3.1") return DefectType::SparseThread;   // Недосека (разреженное расположение)
+        else if (defectClass == "T.3.2") return DefectType::LightStrip;     // Забоина (Светлая полоса)
+        else if (defectClass == "O.1.1") return DefectType::Fold;   // Складка
+        else if (defectClass == "O.1.2") return DefectType::Crease; // Залом
+        else if (defectClass == "O.2.3") return DefectType::HangingString;  // Висячая нить
+        else if (defectClass == "B.3") return DefectType::WaterLeak;    // Затек воды
+        else if (defectClass == "B.4") return DefectType::Spot;     // Пятно
+        else if (defectClass == "C.1.2") return DefectType::Contamination;  // Засоренность
+        else if (defectClass == "C.2.1") return DefectType::Knot;   // Узел
+        else if (defectClass == "C.2.2") return DefectType::Thickening; // Слет (утолщенное место)
+        else if (defectClass == "C.2.3") return DefectType::ThreadThickeningY;  // Утолщение нити по основе 
+        else if (defectClass == "C.2.4") return DefectType::ThreadThickeningX;  // Утолщение нити по утку 
+        else if (defectClass == "C.3.1") return DefectType::DifferentThreadY;   // Отличающаяся нить по основе  
+        else if (defectClass == "C.3.2") return DefectType::DifferentThreadX;   // Отличающаяся нить по утку 
     }
     return DefectType::Default;
 }
@@ -48,10 +65,10 @@ cv::Mat mergeMasks(const cv::Mat& m1, const cv::Mat& m2, const cv::Rect2i& r1, c
     // Определение объединенного прямоугольника, который охватывает оба дефекта
     cv::Rect2i mergedRect = r1 | r2;
 
-    //cv::Mat mergedMask = cv::Mat::zeros(mergedRect.size(), CV_8UC1);
+    cv::Mat mergedMask = cv::Mat::zeros(mergedRect.size(), CV_8UC1);
 
     // Создание белой маски размером объединенного прямоугольника
-    cv::Mat mergedMask = cv::Mat::ones(mergedRect.size(), CV_8UC1) * 255;
+    //cv::Mat mergedMask = cv::Mat::ones(mergedRect.size(), CV_8UC1) * 255;
 
     // Вычисление позиций r1 и r2 относительно объединенного прямоугольника
     cv::Rect2i r1_in_merged = cv::Rect2i(r1.x - mergedRect.x, r1.y - mergedRect.y, r1.width, r1.height);
@@ -123,27 +140,24 @@ void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verti
     }
 }
 
+const int rectExtension = 10;
 
 bool checkForRealDefectsInIntersection(const DetectResult& defect, const DetectResult& mergedDefect)
 {
+    // Расширяем дефектный прямоугольник для учета возможных пересечений
     cv::Rect2i expandedRect = defect.rect;
-    int rectExtension = 10;
     expandedRect.x -= rectExtension;
     expandedRect.y -= rectExtension;
     expandedRect.width += 2 * rectExtension;
     expandedRect.height += 2 * rectExtension;
 
+    // Вычисляем пересечение между расширенным дефектом и объединенным дефектом
     cv::Rect2i intersectionRect = expandedRect & mergedDefect.rect;
-    //std::cout << "Defect: " << defect.rect.x << " " << defect.rect.y << " "
-    //    << defect.rect.width << " " << defect.rect.height << std::endl;
-
-    //std::cout << "Intersection: " << intersectionRect.x << " " << intersectionRect.y << " "
-    //    << intersectionRect.width << " " << intersectionRect.height << std::endl;
 
     if (intersectionRect.area() > 0)
     {
         // Определяем ROI в пределах маски defect.mask
-        // х и у имеют значение 0, если дефекты пересекаются слева, иначе intersectionRect.* - defect.rect.*
+        // х и у имеют значение 0, если дефекты пересекаются слева от defect.mask, иначе intersectionRect.* - defect.rect.*
         int dx = std::max(0, intersectionRect.x - defect.rect.x);
         int dy = std::max(0, intersectionRect.y - defect.rect.y);
 
@@ -155,32 +169,23 @@ bool checkForRealDefectsInIntersection(const DetectResult& defect, const DetectR
 
         // Если пересечение происходит в левой части defect, то все хорошо, но если справа, то смотрим 
         // относительно правого дефекта. Правый - это mergedDefect
-        if (dx + dw > defect.rect.width || dy + dh > defect.rect.height) {
+        bool withinDefect = (dx + dw <= defect.rect.width) && (dy + dh <= defect.rect.height);
+        if (!withinDefect) {
             dx = std::max(0, intersectionRect.x - mergedDefect.rect.x);
             dy = std::max(0, intersectionRect.y - mergedDefect.rect.y);
-            dw = intersectionRect.width;
-            dh = intersectionRect.height;
-
-            //std::cout << "defectMaskROI_rect: " << dx << ", " << dy << ", " << dw << ", " << dh << std::endl;
-
-            // Убедимся, что ROI в пределах маски mergedDefect
-            if (dx < 0 || dy < 0 || dx + dw > mergedDefect.mask.cols || dy + dh > mergedDefect.mask.rows) {
-                std::cout << "Intersection is out of mask bounds or dimensions are invalid" << std::endl;
-                return false;
-            }
-        }
-        else {
-            //std::cout << "defectMaskROI_rect: " << dx << ", " << dy << ", " << dw << ", " << dh << std::endl;
-
-            // Убедимся, что ROI в пределах маски defect
-            if (dx < 0 || dy < 0 || dx + dw > defect.mask.cols || dy + dh > defect.mask.rows) {
-                std::cout << "Intersection is out of mask bounds or dimensions are invalid" << std::endl;
-                return false;
-            }
+            int dw = std::max(rectExtension, std::min(intersectionRect.width, mergedDefect.mask.cols - dx));
+            int dh = std::max(rectExtension, std::min(intersectionRect.height, mergedDefect.mask.rows - dy));
         }
         cv::Rect2i defectMaskROI_rect(dx, dy, dw, dh);
 
-        cv::Mat defectMaskROI = defect.mask(defectMaskROI_rect);
+        // Проверяем, что ROI находится в пределах соответствующей маски
+        const cv::Mat& mask = withinDefect ? defect.mask : mergedDefect.mask;
+        if (dx < 0 || dy < 0 || dx + dw > mask.cols || dy + dh > mask.rows) {
+            std::cout << "Intersection is out of mask bounds or dimensions are invalid" << std::endl;
+            return false;
+        }
+
+        cv::Mat defectMaskROI = mask(defectMaskROI_rect);
         return cv::countNonZero(defectMaskROI) > 0;
     }
 
@@ -196,9 +201,6 @@ void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& 
     {
         bool hasRealDefects = checkForRealDefectsInIntersection(defect, mergedDefect);
 
-        //std::cout << "defect & mergeDefect: " << defect.rect.x << " " << defect.rect.y << " " << mergedDefect.rect.x 
-        //    << " " << mergedDefect.rect.y << " " << hasRealDefects << std::endl;
-
         // Проверяем, пересекается ли расширенная рамка текущего дефекта с рамкой объединенного дефектаa
         if (hasRealDefects)
         {
@@ -209,12 +211,8 @@ void hangingStringDefect(const DetectResult& defect, std::vector<DetectResult>& 
             mergedDefect.mask = newMask;
             mergedDefect.prob = std::max(mergedDefect.prob, defect.prob); 
             merged = true;
-        //    std::cout << "newMask is done. x: " << mergedDefect.rect.x << ", y: " << mergedDefect.rect.y 
-        //        << ", width: " << mergedDefect.rect.width << ", height: " << mergedDefect.rect.height << std::endl;
-
             break;
         }
-        //std::cout << std::endl;
     }
     // Если дефект не был объединен ни с одним из существующих, добавляем его в список
     if (!merged) {
@@ -228,6 +226,7 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
     // map для хранения промежуточных результатов вертикального объединения по каждому типу дефектов
     std::unordered_map<DefectType, std::vector<DetectResult>> verticalMerged;
     std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
+    std::unordered_map<DefectType, std::vector<DetectResult>> otherMerged;
 
     // по строкам
     for (auto& batchesRow : batchesDetects) {
@@ -239,23 +238,45 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
             for (auto& defect : batch.detects) {
                 DefectType defectType = classifyDefect(defect.klass);
                 switch (defectType) {
-                case DefectType::Seam:
-                    horizontalDefect(defect, horizontalMerged[defectType]);
-                    break;
- 
-                case DefectType::HangingString:
-                    hangingStringDefect(defect, verticalMerged[defectType]);
-                break;
+                    case DefectType::Seam:
+                    case DefectType::ThreadSpan:
+                    case DefectType::DoubleThreadX:
+                    case DefectType::LightStrip:
+                    case DefectType::Thickening:
+                    case DefectType::ThreadThickeningX:
+                    case DefectType::DifferentThreadX:
+                    case DefectType::IncompleteDoubleThread:
+                    case DefectType::SparseThread:
+                        horizontalDefect(defect, horizontalMerged[defectType]);
+                        break;
 
-                /*
-                * Для какого-нибудь вертикального дефекта
-                case DefectType::VerticalFirst:
-                    verticalDefect(defect, verticalMerged[defectType]);
-                    break;
-                */
-                default:
-                    resultDetects.push_back(defect);
-                    break;
+                    case DefectType::Dissection:
+                    case DefectType::Blisna:
+                    case DefectType::DoubleThreadY:
+                    case DefectType::ThreadThickeningY:
+                    case DefectType::DifferentThreadY:
+                        verticalDefect(defect, verticalMerged[defectType]);
+                        break;
+
+                    case DefectType::HangingString:
+                    case DefectType::StuffedFluff:
+                    case DefectType::Fold:
+                    case DefectType::Crease:
+                    case DefectType::WaterLeak:
+                    case DefectType::Spot:
+                        hangingStringDefect(defect, otherMerged[defectType]);
+                        break;
+
+                    case DefectType::ViolationOfWeaving:
+                    case DefectType::Contamination:
+                    case DefectType::Knot:
+                    case DefectType::Default:
+                        resultDetects.push_back(defect);
+                        break;
+
+                    default:
+                        resultDetects.push_back(defect);
+                        break;
                 }
             }
         }
@@ -286,6 +307,13 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
 
     // Перемещаем окончательные объединенные дефекты в resultDetects
     for (auto& [defectType, defects] : verticalMerged) {
+        for (auto& defect : defects) {
+            resultDetects.emplace_back(std::move(defect));
+        }
+    }
+
+    // Перемещаем окончательные объединенные дефекты в resultDetects
+    for (auto& [defectType, defects] : otherMerged) {
         for (auto& defect : defects) {
             resultDetects.emplace_back(std::move(defect));
         }

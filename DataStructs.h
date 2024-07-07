@@ -6,8 +6,29 @@
 
 // Определение enum для классов дефектов
 enum class DefectType {
-    Seam,
-    HangingString,
+    Seam,       // Шов
+    HangingString,  // Висячая нить
+    Dissection, // Рассечка
+    Blisna,     // Близна
+    ThreadSpan, // Пролет
+    DoubleThreadY,  // Двойная нить по основе 
+    DoubleThreadX,  // Двойная нить по утку 
+    ViolationOfWeaving, // Нарушение ткацкого переплетения 
+    StuffedFluff,   // Редкое место (Затканный пух) 
+    LightStrip, // Забоина (Светлая полоса)
+    Fold,       // Складка
+    Crease,     // Залом
+    WaterLeak,  // Затек воды
+    Spot,       // Пятно
+    Contamination,  // Засоренность
+    Knot,       // Узел
+    Thickening, // Слет (утолщенное место)
+    ThreadThickeningY,  // Утолщение нити по основе
+    ThreadThickeningX,  // Утолщение нити по утку 
+    DifferentThreadY,   // Отличающаяся нить по основе
+    DifferentThreadX,   // Отличающаяся нить по утку 
+    IncompleteDoubleThread, // Недолет
+    SparseThread,   // Недосека (разреженное расположение)
     Default
 };
 
