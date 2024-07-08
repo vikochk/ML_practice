@@ -3,7 +3,8 @@
 #include "DetectMerger.h"
 #include <unordered_map>
 #include <cmath>
-#include "main.h"
+#include <locale>
+
 
 void addDefect(std::vector<std::vector<BatchResult>>& inputBatchesDefects, int i, int j,
     int x, int y, int width, int height, const std::string& defectClass)
@@ -77,294 +78,260 @@ cv::Mat displayDefects(const std::vector<DetectResult>& resultDefects)
 
 int main()
 {
+    setlocale(LC_ALL, "xx_XX.UTF-8");
     std::vector<std::vector<BatchResult>> inputBatchesDefects(5, std::vector<BatchResult>(4));
 
-    // Заполняем входные данные
+    int option;
+    std::cout << "1 - швы и пятна \n2 - висячие нити \n3 - близна \n0 - выкл \n";
+    std::cin >> option;
+
+    while (option != 0)
     {
-        cv::Size2i imageSize(2000, 2500);
-        cv::Size2i batchSize(500, 500);
-
-        int cols = imageSize.width / batchSize.width + (imageSize.width % batchSize.width != 0);         // = 4
-        int rows = imageSize.height / batchSize.height + (imageSize.height % batchSize.height != 0);     // = 5
-
-        // формируем массив батчей
-        inputBatchesDefects.resize(rows);
-        for (auto& batchesRow : inputBatchesDefects)
+        // Заполняем входные данные
         {
-            batchesRow.resize(cols);
-        }
+            cv::Size2i imageSize(2000, 2500);
+            cv::Size2i batchSize(500, 500);
 
-        for (int i = 0; i < inputBatchesDefects.size(); ++i)
-        {
-            for (int j = 0; j < inputBatchesDefects[i].size(); ++j)
+            int cols = imageSize.width / batchSize.width + (imageSize.width % batchSize.width != 0);         // = 4
+            int rows = imageSize.height / batchSize.height + (imageSize.height % batchSize.height != 0);     // = 5
+
+            // формируем массив батчей
+            inputBatchesDefects.resize(rows);
+            for (auto& batchesRow : inputBatchesDefects)
             {
-                auto& batch = inputBatchesDefects[i][j];
-                batch.batchRect.x = j * batchSize.width;
-                batch.batchRect.y = i * batchSize.height;
-                batch.batchRect.width = std::min(batchSize.width, imageSize.width - batch.batchRect.x);
-                batch.batchRect.height = std::min(batchSize.height, imageSize.height - batch.batchRect.y);
+                batchesRow.resize(cols);
+            }
 
-                //// Пример для соприкасающихся ровно швов в первой строке
-                //if (i == 0 && j < 2) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500, 100, 500, 50, "B.7");
-                //}
-                //else if (i == 0 && j >= 2) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500, 100, 500, 40, "B.7");
-                //}
+            for (int i = 0; i < inputBatchesDefects.size(); ++i)
+            {
+                for (int j = 0; j < inputBatchesDefects[i].size(); ++j)
+                {
+                    auto& batch = inputBatchesDefects[i][j];
+                    batch.batchRect.x = j * batchSize.width;
+                    batch.batchRect.y = i * batchSize.height;
+                    batch.batchRect.width = std::min(batchSize.width, imageSize.width - batch.batchRect.x);
+                    batch.batchRect.height = std::min(batchSize.height, imageSize.height - batch.batchRect.y);
 
-                //// Пример для соприкасающихся не ровно швов в первой строке
-                //if (i == 0 && j < 2) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500, 300, 500, 50, "B.7");
-                //}
-                //else if (i == 0 && j >= 2) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500, 320, 500, 50, "B.7");
-                //}
+                    switch (option) {
+                    case 1: // швы и пятна
+                        // Пример для соприкасающихся ровно швов в первой строке
+                        if (i == 0 && j < 2) {
+                            addDefect(inputBatchesDefects, i, j, j * 500, 100, 500, 50, "B.7");
+                        }
+                        else if (i == 0 && j >= 2) {
+                            addDefect(inputBatchesDefects, i, j, j * 500, 100, 500, 40, "B.7");
+                        }
 
-                //// Пример для шва на расстоянии 10 пикс от другого во второй строке
-                //if (i == 1 && j < 3) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500, 550, 500, 40, "B.7");
-                //}
-                //else if (i == 1 && j == 3) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500 + 10, 560, 490, 40, "B.7");
-                //}
+                        // Пример для соприкасающихся не ровно швов в первой строке
+                        if (i == 0 && j < 2) {
+                            addDefect(inputBatchesDefects, i, j, j * 500, 300, 500, 50, "B.7");
+                        }
+                        else if (i == 0 && j >= 2) {
+                            addDefect(inputBatchesDefects, i, j, j * 500, 320, 500, 50, "B.7");
+                        }
 
-                //// Пример для шва, найденного частично, во второй строке
-                //if (i == 1 && j == 0) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500, 800, 500, 50, "B.7");
-                //}
-                //else if (i == 1 && j == 3) {
-                //    addDefect(inputBatchesDefects, i, j, j * 500 + 200, 800, 300, 100, "B.7");
-                //}
+                        // Пример для шва на расстоянии 10 пикс от другого во второй строке
+                        if (i == 1 && j < 3) {
+                            addDefect(inputBatchesDefects, i, j, j * 500, 550, 500, 40, "B.7");
+                        }
+                        else if (i == 1 && j == 3) {
+                            addDefect(inputBatchesDefects, i, j, j * 500 + 10, 560, 490, 40, "B.7");
+                        }
 
-                //// Пример для шва, пересекающего четыре батча (250, 450 длина 500 ширина 100)
-                ////А
-                //if (i == 1 && j == 0) {
-                //    addDefect(inputBatchesDefects, i, j, 250, 950, 250, 50, "B.7");
-                //}
-                ////C
-                //if (i == 1 && j == 1) {
-                //    addDefect(inputBatchesDefects, i, j, 500, 950, 250, 50, "B.7");
-                //}
-                ////B
-                //if (i == 2 && j == 0) {
-                //    addDefect(inputBatchesDefects, i, j, 260, 1010, 240, 50, "B.7");
-                //}
-                ////D
-                //if (i == 2 && j == 1) {
-                //    addDefect(inputBatchesDefects, i, j, 500, 1000, 250, 50, "B.7");
-                //}
+                        // Пример для шва, найденного частично, во второй строке
+                        if (i == 1 && j == 0) {
+                            addDefect(inputBatchesDefects, i, j, j * 500, 800, 500, 50, "B.7");
+                        }
+                        else if (i == 1 && j == 3) {
+                            addDefect(inputBatchesDefects, i, j, j * 500 + 200, 800, 300, 100, "B.7");
+                        }
 
-                //// Пример для шва, пересекающего четыре батча (1250, 450 длина 500 ширина 100)
-                //if (i == 1 && j == 2) {
-                //    addDefect(inputBatchesDefects, i, j, 1250, 950, 250, 50, "B.7");
-                //}
-                //if (i == 1 && j == 3) {
-                //    addDefect(inputBatchesDefects, i, j, 1500, 950, 250, 50, "B.7");
-                //}
-                //if (i == 2 && j == 2) {
-                //    addDefect(inputBatchesDefects, i, j, 1250, 1000, 250, 50, "B.7");
-                //}
-                //if (i == 2 && j == 3) {
-                //    addDefect(inputBatchesDefects, i, j, 1500, 1000, 250, 50, "B.7");
-                //}
+                        // Пример для шва, пересекающего четыре батча (250, 450 длина 500 ширина 100)
+                        //А
+                        if (i == 1 && j == 0) {
+                            addDefect(inputBatchesDefects, i, j, 250, 950, 250, 50, "B.7");
+                        }
+                        //C
+                        if (i == 1 && j == 1) {
+                            addDefect(inputBatchesDefects, i, j, 500, 950, 250, 50, "B.7");
+                        }
+                        //B
+                        if (i == 2 && j == 0) {
+                            addDefect(inputBatchesDefects, i, j, 260, 1010, 240, 50, "B.7");
+                        }
+                        //D
+                        if (i == 2 && j == 1) {
+                            addDefect(inputBatchesDefects, i, j, 500, 1000, 250, 50, "B.7");
+                        }
 
-                //// Пример пятен
-                //if (i == 0 && j == 3) {
-                //    addDefect(inputBatchesDefects, i, j, 1300, 200, 30, 30, "B.4");
-                //}
-                //if (i == 2 && j == 3) {
-                //    addDefect(inputBatchesDefects, i, j, 1280, 1200, 30, 30, "B.4");
-                //}
-                //if (i == 2 && j == 0) {
-                //    addDefect(inputBatchesDefects, i, j, 70, 1160, 30, 35, "B.4");
-                //}
-                //if (i == 2 && j == 0) {
-                //    addDefect(inputBatchesDefects, i, j, 100, 1200, 30, 30, "B.4");
-                //}
+                        // Пример для шва, пересекающего четыре батча (1250, 450 длина 500 ширина 100)
+                        if (i == 1 && j == 2) {
+                            addDefect(inputBatchesDefects, i, j, 1250, 950, 250, 50, "B.7");
+                        }
+                        if (i == 1 && j == 3) {
+                            addDefect(inputBatchesDefects, i, j, 1500, 950, 250, 50, "B.7");
+                        }
+                        if (i == 2 && j == 2) {
+                            addDefect(inputBatchesDefects, i, j, 1250, 1000, 250, 50, "B.7");
+                        }
+                        if (i == 2 && j == 3) {
+                            addDefect(inputBatchesDefects, i, j, 1500, 1000, 250, 50, "B.7");
+                        }
 
-                //// Висячая нить
-                //if (i == 3 && j == 0) {
-                //    cv::Mat currentMask1 = cv::Mat::zeros(cv::Size(55, 70), CV_8UC1);
-                //    cv::line(currentMask1, cv::Point(0, 70), cv::Point(55, 0), cv::Scalar(255), 3);
-                //    addLineDefect(inputBatchesDefects, i, j, 200, 1500, 55, 70, "O.2.3", currentMask1);
+                        // Пример пятен
+                        if (i == 0 && j == 3) {
+                            addDefect(inputBatchesDefects, i, j, 1300, 200, 30, 30, "B.4");
+                        }
+                        if (i == 2 && j == 3) {
+                            addDefect(inputBatchesDefects, i, j, 1280, 1200, 30, 30, "B.4");
+                        }
+                        if (i == 2 && j == 0) {
+                            addDefect(inputBatchesDefects, i, j, 70, 1160, 30, 35, "B.4");
+                        }
+                        if (i == 2 && j == 0) {
+                            addDefect(inputBatchesDefects, i, j, 100, 1200, 30, 30, "B.4");
+                        }
+                        break;
 
-                //    cv::Mat currentMask2 = cv::Mat::zeros(cv::Size(25, 60), CV_8UC1);
-                //    cv::line(currentMask2, cv::Point(0, 0), cv::Point(25, 60), cv::Scalar(255), 3);
-                //    addLineDefect(inputBatchesDefects, i, j, 470, 1500, 25, 60, "O.2.3", currentMask2);
-                //}
-                //if (i == 2 && j == 0) {
-                //    cv::Mat currentMask = cv::Mat::zeros(cv::Size(215, 70), CV_8UC1);
-                //    cv::line(currentMask, cv::Point(0, 70), cv::Point(115, 0), cv::Scalar(255), 3);
-                //    cv::line(currentMask, cv::Point(115, 0), cv::Point(215, 70), cv::Scalar(255), 3);
-                //    addLineDefect(inputBatchesDefects, i, j, 255, 1430, 215, 70, "O.2.3", currentMask);
-                //}
-                //if (i == 3 && j == 1) {
-                //    cv::Mat currentMask = cv::Mat::zeros(cv::Size(35, 80), CV_8UC1);
-                //    cv::line(currentMask, cv::Point(0, 0), cv::Point(35, 80), cv::Scalar(255), 3);
-                //    addLineDefect(inputBatchesDefects, i, j, 502, 1575, 35, 80, "O.2.3", currentMask);
-                //}
+                    case 2: // только висячие нити
+                        // Висячая нить
+                        if (i == 3 && j == 0) {
+                            cv::Mat currentMask1 = cv::Mat::zeros(cv::Size(55, 70), CV_8UC1);
+                            cv::line(currentMask1, cv::Point(0, 70), cv::Point(55, 0), cv::Scalar(255), 3);
+                            addLineDefect(inputBatchesDefects, i, j, 200, 1500, 55, 70, "O.2.3", currentMask1);
 
-                //// Батч (0, 0) - линия от (410, 410) до (490, 490)
-                //if (i == 0 && j == 0) {
-                //    cv::Mat mask = cv::Mat::zeros(cv::Size(90, 90), CV_8UC1);
-                //    cv::line(mask, cv::Point(0, 0), cv::Point(80, 80), cv::Scalar(255), 5);  // Линия от (0, 0) до (80, 80)
-                //    addLineDefect(inputBatchesDefects, i, j, 410, 410, 90, 90, "O.2.3", mask);
-                //}
+                            cv::Mat currentMask2 = cv::Mat::zeros(cv::Size(25, 60), CV_8UC1);
+                            cv::line(currentMask2, cv::Point(0, 0), cv::Point(25, 60), cv::Scalar(255), 3);
+                            addLineDefect(inputBatchesDefects, i, j, 470, 1500, 25, 60, "O.2.3", currentMask2);
+                        }
+                        if (i == 2 && j == 0) {
+                            cv::Mat currentMask = cv::Mat::zeros(cv::Size(215, 70), CV_8UC1);
+                            cv::line(currentMask, cv::Point(0, 70), cv::Point(115, 0), cv::Scalar(255), 3);
+                            cv::line(currentMask, cv::Point(115, 0), cv::Point(215, 70), cv::Scalar(255), 3);
+                            addLineDefect(inputBatchesDefects, i, j, 255, 1430, 215, 70, "O.2.3", currentMask);
+                        }
+                        if (i == 3 && j == 1) {
+                            cv::Mat currentMask = cv::Mat::zeros(cv::Size(35, 80), CV_8UC1);
+                            cv::line(currentMask, cv::Point(0, 0), cv::Point(35, 80), cv::Scalar(255), 3);
+                            addLineDefect(inputBatchesDefects, i, j, 502, 1575, 35, 80, "O.2.3", currentMask);
+                        }
 
-                //// Батч (1, 1) - линия от (500, 500) до (1000, 1000)
-                //if (i == 1 && j == 1) {
-                //    cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                //    cv::line(mask, cv::Point(0, 0), cv::Point(500, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
-                //    addLineDefect(inputBatchesDefects, i, j, 500, 500, 500, 500, "O.2.3", mask);
-                //}
+                        // Батч (0, 0) - линия от (410, 410) до (490, 490)
+                        if (i == 0 && j == 0) {
+                            cv::Mat mask = cv::Mat::zeros(cv::Size(90, 90), CV_8UC1);
+                            cv::line(mask, cv::Point(0, 0), cv::Point(80, 80), cv::Scalar(255), 5);  // Линия от (0, 0) до (80, 80)
+                            addLineDefect(inputBatchesDefects, i, j, 410, 410, 90, 90, "O.2.3", mask);
+                        }
 
-                //// Батч (2, 2) - линия от (1500, 1000) до (1000, 1500)
-                //if (i == 2 && j == 2) {
-                //    cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                //    cv::line(mask, cv::Point(500, 0), cv::Point(0, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
-                //    addLineDefect(inputBatchesDefects, i, j, 1000, 1000, 500, 500, "O.2.3", mask);
-                //}
+                        // Батч (1, 1) - линия от (500, 500) до (1000, 1000)
+                        if (i == 1 && j == 1) {
+                            cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
+                            cv::line(mask, cv::Point(0, 0), cv::Point(500, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
+                            addLineDefect(inputBatchesDefects, i, j, 500, 500, 500, 500, "O.2.3", mask);
+                        }
 
-                //// Нитки "галочкой"
-                //if (i == 4 && j == 0) {
-                //    cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
-                //    cv::line(mask1, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5);
-                //    addLineDefect(inputBatchesDefects, i, j, 0, 2000, 100, 100, "O.2.3", mask1);
+                        // Батч (2, 2) - линия от (1500, 1000) до (1000, 1500)
+                        if (i == 2 && j == 2) {
+                            cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
+                            cv::line(mask, cv::Point(500, 0), cv::Point(0, 500), cv::Scalar(255), 5);  // Линия от (0, 0) до (500, 500)
+                            addLineDefect(inputBatchesDefects, i, j, 1000, 1000, 500, 500, "O.2.3", mask);
+                        }
 
-                //    cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
-                //    cv::line(mask2, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
-                //    addLineDefect(inputBatchesDefects, i, j, 105, 2000, 100, 100, "O.2.3", mask2);
-                //}
+                        // Нитки "галочкой"
+                        if (i == 4 && j == 0) {
+                            cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                            cv::line(mask1, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 0, 2000, 100, 100, "O.2.3", mask1);
 
-                //// Нитки, пересекающиеся ровно на левом краю полотна и совпадающие
-                //if (i == 0 && j == 0) {
-                //    cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
-                //    cv::line(mask1, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
-                //    addLineDefect(inputBatchesDefects, i, j, 0, 108, 100, 100, "O.2.3", mask1);
+                            cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                            cv::line(mask2, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 105, 2000, 100, 100, "O.2.3", mask2);
+                        }
 
-                //    cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
-                //    cv::line(mask2, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5);
-                //    addLineDefect(inputBatchesDefects, i, j, 0, 0, 100, 100, "O.2.3", mask2);
+                        // Нитки, пересекающиеся ровно на левом краю полотна и совпадающие
+                        if (i == 0 && j == 0) {
+                            cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                            cv::line(mask1, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 0, 108, 100, 100, "O.2.3", mask1);
 
-                //    cv::Mat mask3 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
-                //    cv::line(mask3, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
-                //    addLineDefect(inputBatchesDefects, i, j, 50, 150, 100, 100, "O.2.3", mask3);
-                //}
+                            cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                            cv::line(mask2, cv::Point(100, 0), cv::Point(0, 100), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 0, 0, 100, 100, "O.2.3", mask2);
 
-                //// Примеры рассечки
-                //if (i == 0 && j <= 4) {
-                //    addDefect(inputBatchesDefects, i, j, 1800, 20 + 500 * j, 20, 480, "T.2.2.1");
-                //}
+                            cv::Mat mask3 = cv::Mat::zeros(cv::Size(100, 100), CV_8UC1);
+                            cv::line(mask3, cv::Point(0, 0), cv::Point(100, 100), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 50, 150, 100, 100, "O.2.3", mask3);
+                        }
+                        break;
 
-                 // Пример для вертикального дефекта типа "Т.1.1" в первой строке
-                 if (i == 0 && j == 0) {
-                 // Первая маска
-                 cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                 cv::line(mask1, cv::Point(90, 0), cv::Point(90, 500), cv::Scalar(255), 5);
-                 addLineDefect(inputBatchesDefects, i, j, 0, 0, 100, 500, "T.1.1", mask1);
+                    case 3: // вертикальные (близна)
+                        // Пример для вертикального дефекта типа "Т.1.1" в первой строке
+                        if (i <= 4 && j == 0) {
+                            // Первая маска
+                            cv::Mat mask1 = cv::Mat::zeros(cv::Size(5, 500), CV_8UC1); 
+                            cv::line(mask1, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 400, 500 * i, 5, 500, "T.1.1", mask1);
 
-                 // Вторая маска
-                 cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                 cv::line(mask2, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
-                 addLineDefect(inputBatchesDefects, i, j, 105, 0, 100, 500, "T.1.1", mask2);
-                 }
+                            // Вторая маска
+                            cv::Mat mask2 = cv::Mat::zeros(cv::Size(5, 500), CV_8UC1); 
+                            cv::line(mask2, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 425, 500 * i, 5, 500, "T.1.1", mask2);
+                        }
 
-                 // Пример для вертикального дефекта типа "Т.1.1" во второй строке
-                 if (i == 0 && j == 1) {
-                     // Первая маска
-                     cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                     cv::line(mask1, cv::Point(90, 0), cv::Point(90, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 0, 500, 100, 500, "T.1.1", mask1);
-
-                     // Вторая маска
-                     cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                     cv::line(mask2, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 105, 500, 100, 500, "T.1.1", mask2);
-                 }
-
-                 // Пример для вертикального дефекта типа "Т.1.1" в третьей строке
-                 if (i == 0 && j == 2) {
-                     // Первая маска
-                     cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                     cv::line(mask1, cv::Point(90, 0), cv::Point(90, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 0, 1000, 100, 500, "T.1.1", mask1);
-
-                     // Вторая маска
-                     cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                     cv::line(mask2, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 105, 1000, 100, 500, "T.1.1", mask2);
-                 }
-
-                 // Пример для вертикального дефекта типа "Т.1.1" в четвертой строке
-                 if (i == 0 && j == 3) {
-                     // Первая маска
-                     cv::Mat mask1 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                     cv::line(mask1, cv::Point(90, 0), cv::Point(90, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 0, 1500, 100, 500, "T.1.1", mask1);
-
-                     // Вторая маска
-                     cv::Mat mask2 = cv::Mat::zeros(cv::Size(100, 500), CV_8UC1); // Уменьшаем размер до 100x500
-                     cv::line(mask2, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 105, 1500, 100, 500, "T.1.1", mask2);
-                 }
-
-
-                 // Пример для вертикального дефекта типа "Т.1.1" в первой строке
-                 if (i == 3 && j == 0) {
-                     cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                     cv::line(mask, cv::Point(400, 0), cv::Point(400, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 1500, 0, 500, 500, "T.1.1", mask);
-                 }
-
-                 // Пример для вертикального дефекта типа "Т.1.1" во второй строке
-                 if (i == 3 && j == 1) {
-                     cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                     cv::line(mask, cv::Point(400, 0), cv::Point(400, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 1500, 500, 500, 500, "T.1.1", mask);
-                 }
-
-                 // Пример для вертикального дефекта типа "Т.1.1" в третьей строке
-                 if (i == 3 && j == 2) {
-                     cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                     cv::line(mask, cv::Point(400, 0), cv::Point(400, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 1500, 1000, 500, 500, "T.1.1", mask);
-                 }
-
-                 // Пример для вертикального дефекта типа "Т.1.1" в четвертой строке
-                 if (i == 3 && j == 3) {
-                     cv::Mat mask = cv::Mat::zeros(cv::Size(500, 500), CV_8UC1);
-                     cv::line(mask, cv::Point(400, 0), cv::Point(400, 500), cv::Scalar(255), 5);
-                     addLineDefect(inputBatchesDefects, i, j, 1500, 1500, 500, 500, "T.1.1", mask);
-                 }
+                        // Пример для вертикального дефекта типа "Т.1.1" в первой строке
+                        if (i <= 4 && j == 3) {
+                            cv::Mat mask = cv::Mat::zeros(cv::Size(5, 500), CV_8UC1);
+                            cv::line(mask, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
+                            addLineDefect(inputBatchesDefects, i, j, 1600, 500 * i, 5, 500, "T.1.1", mask);
+                        }
+                        break;
+                    }
+                }
             }
         }
-    }
 
 
-    // Использование функции для объединения дефектов
-    {
-        std::vector<DetectResult> resultDefects;
-
-        //написанная функция
-        mergeDefectsMy(std::move(inputBatchesDefects), resultDefects);
-        //базовая функция для тестирования
-        //mergeDefects(std::move(inputBatchesDefects), resultDefects);  // используем move, чтобы не копировать входные дефекты в функцию, а переместить их
-
-
-        for (const auto& defect : resultDefects)
+        // Использование функции для объединения дефектов
         {
-            std::cout << "Defect class: " << defect.klass
-                << ", Rect: (" << defect.rect.x << ", " << defect.rect.y << ", "
-                << defect.rect.width << ", " << defect.rect.height << ")"
-                << ", Probability: " << defect.prob << std::endl;
-        }
+            std::vector<DetectResult> resultDefects;
 
-        // Отображение всех дефектов на одном изображении
-        cv::Mat combinedImage = displayDefects(resultDefects);
-        // Выводим результаты
-        cv::imshow("Combined Defects", combinedImage);
-        cv::waitKey(0);
-        cv::destroyAllWindows();
+            std::cout << "\nДо обработки: \n";
+            //базовая функция для тестирования
+            mergeDefects(inputBatchesDefects, resultDefects);  // используем move, чтобы не копировать входные дефекты в функцию, а переместить их
+
+            for (const auto& defect : resultDefects)
+            {
+                std::cout << "Defect class: " << defect.klass
+                    << ", Rect: (" << defect.rect.x << ", " << defect.rect.y << ", "
+                    << defect.rect.width << ", " << defect.rect.height << ")"
+                    << ", Probability: " << defect.prob << std::endl;
+            }
+
+            resultDefects.clear();
+
+            std::cout << "\nПосле обработки: \n";
+            //написанная функция
+            mergeDefectsMy(std::move(inputBatchesDefects), resultDefects);
+
+
+            for (const auto& defect : resultDefects)
+            {
+                std::cout << "Defect class: " << defect.klass
+                    << ", Rect: (" << defect.rect.x << ", " << defect.rect.y << ", "
+                    << defect.rect.width << ", " << defect.rect.height << ")"
+                    << ", Probability: " << defect.prob << std::endl;
+            }
+            
+            std::cout << std::endl;
+
+            // Отображение всех дефектов на одном изображении
+            cv::Mat combinedImage = displayDefects(resultDefects);
+            // Выводим результаты
+            cv::imshow("Combined Defects", combinedImage);
+            cv::waitKey(0);
+            cv::destroyAllWindows();
+        }
+        std::cin >> option;
     }
     return 0;
 }
