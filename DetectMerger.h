@@ -113,12 +113,14 @@ void verticalDefectHorizontally(const DetectResult& defect, std::vector<DetectRe
     bool merged = false;
 
     for (auto& mergedDefect : verticalMergedDefectsOneType) {
-        cv::Rect2i extendedRect = mergedDefect.rect;
-        extendedRect.x = (mergedDefect.rect.x < 10) ? 0 : mergedDefect.rect.x - 10;
+        // Расширяем рамку одного из дефектов для проверки окрестности
+        cv::Rect2i expandedRect = defect.rect;
+
+        expandedRect.x = defect.rect.x - 10;
 
         // Проверяем, пересекаются ли расширенные дефекты
-        if (defect.rect.x + defect.rect.width >= extendedRect.x &&
-            defect.rect.x <= mergedDefect.rect.x + mergedDefect.rect.width) {
+        if (mergedDefect.rect.x + mergedDefect.rect.width >= expandedRect.x &&
+            mergedDefect.rect.x <= defect.rect.x + defect.rect.width){
 
             // Объединяем дефекты
             cv::Rect2i newRect = mergedDefect.rect | defect.rect;
@@ -137,6 +139,7 @@ void verticalDefectHorizontally(const DetectResult& defect, std::vector<DetectRe
         verticalMergedDefectsOneType.emplace_back(defect);
     }
 }
+
 
 
 void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verticalMergedDefectsOneType)
