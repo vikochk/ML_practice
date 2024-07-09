@@ -270,7 +270,7 @@ int main()
                             // Первая маска
                             cv::Mat mask1 = cv::Mat::zeros(cv::Size(5, 500), CV_8UC1); 
                             cv::line(mask1, cv::Point(0, 0), cv::Point(0, 500), cv::Scalar(255), 5);
-                            addLineDefect(inputBatchesDefects, i, j, 400, 500 * i, 5, 500, "T.1.1", mask1);
+                            addLineDefect(inputBatchesDefects, i, j, 416, 500 * i, 5, 500, "T.1.1", mask1);
 
                             // Вторая маска
                             cv::Mat mask2 = cv::Mat::zeros(cv::Size(5, 500), CV_8UC1); 
