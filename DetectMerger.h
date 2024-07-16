@@ -141,7 +141,6 @@ void verticalDefectHorizontally(const DetectResult& defect, std::vector<DetectRe
 }
 
 
-
 void verticalDefect(const DetectResult& defect, std::vector<DetectResult>& verticalMergedDefectsOneType)
 {
     bool mergedVer = false;
@@ -215,15 +214,14 @@ bool checkForRealDefectsInIntersection(const DetectResult& defect, const DetectR
         if (!withinDefect) {
             dx = std::max(0, intersectionRect.x - mergedDefect.rect.x);
             dy = std::max(0, intersectionRect.y - mergedDefect.rect.y);
-            int dw = std::max(rectExtension, std::min(intersectionRect.width, mergedDefect.mask.cols - dx));
-            int dh = std::max(rectExtension, std::min(intersectionRect.height, mergedDefect.mask.rows - dy));
+            dw = std::max(rectExtension, std::min(intersectionRect.width, mergedDefect.mask.cols - dx));
+            dh = std::max(rectExtension, std::min(intersectionRect.height, mergedDefect.mask.rows - dy));
         }
         cv::Rect2i defectMaskROI_rect(dx, dy, dw, dh);
 
         // Проверяем, что ROI находится в пределах соответствующей маски
         const cv::Mat& mask = withinDefect ? defect.mask : mergedDefect.mask;
         if (dx < 0 || dy < 0 || dx + dw > mask.cols || dy + dh > mask.rows) {
-            std::cout << "Intersection is out of mask bounds or dimensions are invalid" << std::endl;
             return false;
         }
 
@@ -266,11 +264,12 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
 {
     // map для хранения промежуточных результатов вертикального объединения по каждому типу дефектов
     std::unordered_map<DefectType, std::vector<DetectResult>> verticalMerged;
-    std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
     std::unordered_map<DefectType, std::vector<DetectResult>> otherMerged;
-    std::unordered_map<DefectType, std::vector<DetectResult>> verticalMergedHorizontally;
     // по строкам
     for (auto& batchesRow : batchesDetects) {
+
+        std::unordered_map<DefectType, std::vector<DetectResult>> verticalMergedHorizontally;
+        std::unordered_map<DefectType, std::vector<DetectResult>> horizontalMerged;
 
         bool vertical = 0;
         bool horizontal = 0;
@@ -314,7 +313,7 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
                     vertical = 1;
                     break;
                 default:
-                    resultDetects.push_back(defect); 
+                    resultDetects.push_back(defect);
                     break;
                 }
             }
@@ -331,7 +330,7 @@ void mergeDefectsMy(std::vector<std::vector<BatchResult>> batchesDetects, std::v
 
         // Вертикальное объединение результатов этой строки для толстых вертикальных дефектов
         for (auto& [defectType, defects] : verticalMergedHorizontally) {
-            if (vertical){
+            if (vertical) {
                 for (const auto& defect : defects) {
                     verticalDefect(defect, verticalMerged[defectType]);
                 }
